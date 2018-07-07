@@ -41,7 +41,7 @@ class ZujuanPipeline(object):
         # sys.setdefaultencoding('utf-8')
 
     def process_item(self, item, spider):
-        if spider.name == 'zujuan':
+        if spider.name == 'zujuan' or spider.name == 'zxls':
             # 先判断试卷是否已经存在
             site_id = 202
             paper = item['paper']
@@ -78,42 +78,44 @@ class ZujuanPipeline(object):
                     item['source_id'],
                     paper_id,
                     pymysql.escape_string(item['description']),
-                    pymysql.escape_string(item['method']),
-                    pymysql.escape_string(item['answer']),
+                    # pymysql.escape_string(item['method']),
+                    item['method'],
+                    # pymysql.escape_string(item['answer']),
+                    item['answer'],
                     item['options'],
                     item['points'],
                     item['url'],
                     item['sort']
                 )
             )
-        elif spider.name == 'zxls':
-            print('---存数据---')
-            # 先判断试卷是否已经存在
-            site_id = 203
-            paper = item
-            self.cursor.execute("select id from papers where url='%s'" % (paper['url']))
-            row = self.cursor.fetchone()
-            print('===========')
-            print('rowcount:%s' % self.cursor.rowcount)
-            print('=========')
-            if self.cursor.rowcount == 0:
-                self.cursor.execute(self.paper_sql,
-                                    (paper['title'],
-                                     site_id,
-                                     paper['year'],
-                                     1,
-                                     paper['subject'],
-                                     paper['grade'],
-                                     paper['type'],
-                                     paper['exercise_num'],
-                                     paper['views'],
-                                     paper['uploaded_at'],
-                                     paper['url'])
-                                    )
-                paper_id = self.cursor.lastrowid
-            else:
-                self.cursor.execute(self.paper_update_sql, (paper['exercise_num'], paper['url']))
-                paper_id = row[0]
+        # elif spider.name == 'zxls':
+        #     print('---存数据---')
+        #     # 先判断试卷是否已经存在
+        #     site_id = 203
+        #     paper = item['paper']
+        #     self.cursor.execute("select id from papers where url='%s'" % (paper['url']))
+        #     row = self.cursor.fetchone()
+        #     print('===========')
+        #     print('rowcount:%s' % self.cursor.rowcount)
+        #     print('=========')
+        #     if self.cursor.rowcount == 0:
+        #         self.cursor.execute(self.paper_sql,
+        #                             (paper['title'],
+        #                              site_id,
+        #                              paper['year'],
+        #                              1,
+        #                              paper['subject'],
+        #                              paper['grade'],
+        #                              paper['type'],
+        #                              paper['exercise_num'],
+        #                              paper['views'],
+        #                              paper['uploaded_at'],
+        #                              paper['url'])
+        #                             )
+        #         paper_id = self.cursor.lastrowid
+        #     else:
+        #         self.cursor.execute(self.paper_update_sql, (paper['exercise_num'], paper['url']))
+        #         paper_id = row[0]
         else:
             spider.log('Undefined name: %s' % spider.name)
 

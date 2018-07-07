@@ -190,7 +190,6 @@ class ExerciseSpider(scrapy.Spider):
                 exercise['degree']      = self.degree[str(question['difficult_index'])]
                 exercise['source_id']   = question['question_id']
                 exercise['type']        = self.questionTypes[str(question['question_channel_type'])]
-                exercise['paper_id']    = question['paperid']
                 exercise['description'] = question['question_text']
                 exercise['options']     = json.dumps(question['options'])
                 exercise['answer']      = question['answer']

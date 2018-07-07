@@ -145,17 +145,40 @@ class ZxlsSpider(scrapy.Spider):
             'subject'       : subject,
             'grade'         : grade,
             'type'          : type,
+            'level'         : '1',
             'year'          : year,
             'views'         : views,
             'exercise_num'  : exercise_num,
             'year'          : year,
             'uploaded_at'   : uploaded_at,
         }
+        #题型
+        exercise_types = response.xpath("//div[@id='subjectList']/p/text()").extract()
+        for exercise_type in exercise_types:
+            if exercise_type != None:
+                # exercise_type = str(exercise_type)
+                print(exercise_type)
+                exercises  = response.xpath("//div[@class='subject']")
+                sort = 0
+                for exercise in exercises:
+                    if exercise != None:
+                        description = exercise.xpath(".//tr[1]/td[2]/h3").extract_first()
+                        detail = exercise.xpath(".//tr[1]/td[2]/h3/text()").extract_first()
+                        if detail != None:
+                            sort += 1
+                            options     = json.dumps(exercise.xpath(".//td[@class='sstd']/text()").extract())
+                            yield {
+                                'subject'      : subject,
+                                'degree'       : None,
+                                'source_id'    : None,
+                                'type'         : exercise_type,
+                                'description'  : description,
+                                'options'      : options,
+                                'answer'       : None,
+                                'method'       : None,
+                                'points'       : None,
+                                'url'          : None,
+                                'sort'         : sort,
+                                'paper'        : paper
+                            }
 
-        # exercise_type = response.xpath("//div[@id='subjectList']/p[1]/text()").extract_first().replace(u'一、','')
-        exercises  = response.xpath("//div[@class='subject']")
-        for exercise in exercises:
-            description = exercise.xpath(".//h3[2]").extract_first()
-            print(description)
-
-        # yield paper

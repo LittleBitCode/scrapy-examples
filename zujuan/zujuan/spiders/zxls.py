@@ -8,6 +8,7 @@ from lxml import html
 import json
 from scrapy.http.cookies import CookieJar
 import urllib
+import time
 import re
 # 实例化一个cookiejar对象
 cookie_jar = CookieJar()
@@ -35,6 +36,10 @@ class ZxlsSpider(scrapy.Spider):
         "Referer": "http://zujuan.zxls.com/Login.aspx?ReturnUrl=%2fIndex.aspx"
     }
 
+    cid = {
+        1 : '历史'
+    }
+
     def start_requests(self):
         url = self.base_url + '/Login.aspx?ReturnUrl=/Index.aspx'
         return [Request(url, meta = {'cookiejar' : 1},callback = self.login)]
@@ -46,7 +51,7 @@ class ZxlsSpider(scrapy.Spider):
         captcha_img = 'http://zujuan.zxls.com/CheckCode.aspx'
         localPath = '/Users/zhengchaohua/Desktop/images/captcha.png'
         urllib.urlretrieve(captcha_img, localPath)
-        captcha_value = raw_input('查看captcha.png,有验证码请输入:')
+        # captcha_value = raw_input('查看captcha.png,有验证码请输入:')
         formdata = {
                     '__VIEWSTATE'           : viewState,
                     '__VIEWSTATEGENERATOR'  : viewStateGenerator,
@@ -56,9 +61,8 @@ class ZxlsSpider(scrapy.Spider):
                     'CheckBox1'             : 'on',
                     'ImageButton1.x'        :'38',
                     'ImageButton1.y'        :'33',
-                    'txtYzmCode'            : captcha_value
+                    # 'txtYzmCode'            : captcha_value
                    }
-        print("----------登录中----------")
         return [FormRequest.from_response(
             response,
             meta        ={'cookiejar': response.meta['cookiejar']},
@@ -67,11 +71,7 @@ class ZxlsSpider(scrapy.Spider):
             callback    = self.after_login
         )]
 
-    def after_login(self,response,page = 1):
-        print("----------完成登录----------")
-        # if response.meta != None :
-        #     if response.meta['page'] != None:
-        #         print('123')
+    def after_login(self,response):
         yield FormRequest(
                 self.base_url + '/Web/ashx_/PaperSearch.ashx',
                 headers=self.headers,
@@ -80,7 +80,8 @@ class ZxlsSpider(scrapy.Spider):
                             'cid' : '1',
                             'gr'  : '高三级',
                             'cty' : '高考真题',
-                            'page': str(page)
+                            'page': '1',
+                            'rows': '10'
                            },
                 callback = self.parse_paper_list,
                 # dont_filter=True
@@ -89,30 +90,72 @@ class ZxlsSpider(scrapy.Spider):
 
 
     def parse_paper_list(self,response):
-        # papers = html.fromstring(response.body)
         js = json.loads(response.body)
         xml_string = html.fromstring(js['data'])
         papers = xml_string.xpath("//a[@class='goto']/@href")
-        # for paper in papers:
-        #     if 'PaperCenter' in paper:
-        #         continue
-        #     else:
-        #         yield Request(
-        #             self.base_url+ '/' + paper,
-        #             callback=self.parse_exercise_list,
-        #             dont_filter=True
-        #         )
-
-        page_string  = html.fromstring(js['pager'])
-        current_page = page_string.xpath("//a[1]/text()")[0]
-        current_page = '总34条记录,页次:4/14页'
-        total_page   = re.sub("\D","",current_page)[0]
-        print(total_page)
+        for index,paper in enumerate(papers):
+            if 'PaperCenter' in paper:
+                continue
+            else:
+                url = self.base_url+ '/' + paper
+                year = xml_string.xpath("//tr['index']/td[5]/text()")[index]
+                yield Request(
+                    url,
+                    meta={'year':year},
+                    callback=self.parse_exercise_list,
+                    # dont_filter=True
+                )
+        # 下一页
+        # page_string  = html.fromstring(js['pager'])
+        # current_page = page_string.xpath("//a[@class='change']/text()")[0]
+        # total_page = int( int(js['total']) / 10) + 1
+        # next_page = int(current_page) + 1
+        # if next_page <= total_page:
+        #     yield FormRequest(
+        #         self.base_url + '/Web/ashx_/PaperSearch.ashx',
+        #         headers=self.headers,
+        #         meta={"cookiejar": response.meta["cookiejar"]},
+        #         formdata={
+        #             'cid' : '1',
+        #             'gr'  : '高三级',
+        #             'cty' : '高考真题',
+        #             'page': str(next_page),
+        #             'rows': '10'
+        #         },
+        #         callback=self.parse_paper_list,
+        #         # dont_filter=True
+        #     )
 
     def parse_exercise_list(self, response):
-        # print(response.body)
-        title = response.xpath('//title/text()').extract()[0].encode('utf-8');
+        url          = response.url
+        title        = response.xpath("//div[@class='sjbt']/h1/text()").extract_first()
+        subject      = self.cid[1]
+        grade        = response.xpath("//div[@class='xiaobiaoti']/span[1]/text()").extract_first().replace(u'适用年级：', '')
+        type         = response.xpath("//div[@class='xiaobiaoti']/span[2]/text()").extract_first().replace(u'试卷类型：', '')
+        year         = response.xpath("//div[@class='xiaobiaoti']/span[4]/text()").extract_first().replace(u'试卷年份：', '').replace(u'年','')
+        exercise_num = response.xpath("//div[@class='xiaobiaoti']/span[5]/text()").extract_first().replace(u'题数：', '')
+        views        = response.xpath("//div[@class='xiaobiaoti']/span[6]/text()").extract_first().replace(u'浏览数：', '')
+        uploaded_at  = response.meta['year']
+
+        # st = time.strptime(str(uploaded_at)+" 00:00:00", '%Y-%m-%d %H:%M:%S')
+        #         # uploaded_at = time.strftime("%Y-%m-%d %H:%M:%S", st)
         paper = {
-            'title': title
+            'url'           : url,
+            'title'         : title,
+            'subject'       : subject,
+            'grade'         : grade,
+            'type'          : type,
+            'year'          : year,
+            'views'         : views,
+            'exercise_num'  : exercise_num,
+            'year'          : year,
+            'uploaded_at'   : uploaded_at,
         }
-        yield paper
+
+        # exercise_type = response.xpath("//div[@id='subjectList']/p[1]/text()").extract_first().replace(u'一、','')
+        exercises  = response.xpath("//div[@class='subject']")
+        for exercise in exercises:
+            description = exercise.xpath(".//h3[2]").extract_first()
+            print(description)
+
+        # yield paper

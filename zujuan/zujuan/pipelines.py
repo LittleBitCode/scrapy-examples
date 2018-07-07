@@ -91,9 +91,29 @@ class ZujuanPipeline(object):
             # 先判断试卷是否已经存在
             site_id = 203
             paper = item
-            self.cursor.execute(self.zxls_paper_sql,
-                                paper['title'])
-            paper_id = self.cursor.lastrowid
+            self.cursor.execute("select id from papers where url='%s'" % (paper['url']))
+            row = self.cursor.fetchone()
+            print('===========')
+            print('rowcount:%s' % self.cursor.rowcount)
+            print('=========')
+            if self.cursor.rowcount == 0:
+                self.cursor.execute(self.paper_sql,
+                                    (paper['title'],
+                                     site_id,
+                                     paper['year'],
+                                     1,
+                                     paper['subject'],
+                                     paper['grade'],
+                                     paper['type'],
+                                     paper['exercise_num'],
+                                     paper['views'],
+                                     paper['uploaded_at'],
+                                     paper['url'])
+                                    )
+                paper_id = self.cursor.lastrowid
+            else:
+                self.cursor.execute(self.paper_update_sql, (paper['exercise_num'], paper['url']))
+                paper_id = row[0]
         else:
             spider.log('Undefined name: %s' % spider.name)
 

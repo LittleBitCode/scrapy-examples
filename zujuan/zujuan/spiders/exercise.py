@@ -154,7 +154,7 @@ class ExerciseSpider(scrapy.Spider):
             item['views']        = list['look_num']
             item['year']         = list['paperyear']
             item['url']          = self.base_url + list['viewUrl']
-            time_local = time.localtime(int(list['addtime']))
+            time_local           = time.localtime(int(list['addtime']))
             item['uploaded_at']  = time.strftime("%Y-%m-%d %H:%M:%S", time_local)
             # print(self.base_url + '/paper/detail?pid=' + list['pid'])
             yield Request(

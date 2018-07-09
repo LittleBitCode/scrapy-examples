@@ -15,7 +15,10 @@ import urlparse
 class GzzzSpider(scrapy.Spider):
     name = 'gzzz'
     allowed_domains = ['zujuan.21cnjy.com']
-    start_urls = ['http://zujuan.21cnjy.com/']
+    start_urls = [
+        'http://zujuan.21cnjy.com/',
+        'http://zujuan.21cnjy.com/paper/paper-exam-list?xd=3&chid=9'
+    ]
     base_url = 'https://zujuan.21cnjy.com'
     xd = {
         '1': "小学",
@@ -88,21 +91,15 @@ class GzzzSpider(scrapy.Spider):
         '4': '较难',
         '5': '困难',
     }
-    def start_requests(self):
-        # url = self.base_url + '/paper/new-index?chid=9&xd=3&tree_type=exam'
-        url = self.base_url + '/paper/paper-exam-list?xd=3&chid=9&papertype=&province_id=&paperyear=&page=1'
-
-        #paper/paper-category-list?xd=2&chid=2
-        return [Request(url,callback=self.parse_list)]
 
     # 分析试卷列表
-    def parse_list(self ,response):
+    def parse(self ,response):
         result = urlparse.urlparse(response.url)
         params = urlparse.parse_qs(result.query)
-        js = json.loads(response.body)
-        lists = js["list"]
+        js     = json.loads(response.body)
+        lists  = js["list"]
         for list in lists:
-            item = Paper()
+            item                 = Paper()
             item['title']        = list['title']
             item['grade']        = self.xd[params['xd'][0]]
             item['subject']      = self.chid[str(list['chid'])]
@@ -113,35 +110,34 @@ class GzzzSpider(scrapy.Spider):
             item['url']          = self.base_url + list['viewUrl']
             time_local           = time.localtime(int(list['addtime']))
             item['uploaded_at']  = time.strftime("%Y-%m-%d %H:%M:%S", time_local)
-            # print(self.base_url + '/paper/detail?pid=' + list['pid'])
             yield Request(
                 self.base_url + '/paper/detail?pid=' + list['pid'],
-                callback=self.parse_exercise_list,
-                meta={'paper': item},
-                # dont_filter=True
+                callback    = self.parse_exercise_list,
+                meta        = {'paper': item},
+                dont_filter = True
             )
 
         if js["pager"]:
             xml_string = html.fromstring(js["pager"])
-            next_link = xml_string.xpath("//div[@class='pagenum']/a[last()]/@href")[0]
+            next_link  = xml_string.xpath("//div[@class='pagenum']/a[last()]/@href")[0]
             if next_link:
                 yield Request(
-                    url=self.base_url + next_link,
-                    callback=self.parse_list,
-                    # dont_filter=True
+                    url         = self.base_url + next_link,
+                    callback    = self.parse,
+                    dont_filter = True
                 )
 
     # 分析试题列表
     def parse_exercise_list(self, response):
-        js = json.loads(response.body)
-        lists = js["content"]
+        js           = json.loads(response.body)
+        lists        = js["content"]
         exercise_num = 0
-        sort = 0
+        sort         = 0
         for list in lists:
             exercise_num += len(list['questions'])
             for question in list['questions']:
                 sort += 1
-                paper = response.meta['paper']
+                paper                   = response.meta['paper']
                 exercise                = ExerciseItem()
                 exercise['subject']     = paper['subject']
                 exercise['degree']      = self.degree[str(question['difficult_index'])]
@@ -151,12 +147,7 @@ class GzzzSpider(scrapy.Spider):
                 exercise['options']     = json.dumps(question['options'])
                 exercise['answer']      = question['answer']
                 exercise['method']      = question['explanation']
-                # print()
-                # if question['t_knowledge']:
-                #     for v in question['t_knowledge']:
-                #         print(v)
-
-                exercise['points'] = json.dumps(question['t_knowledge'])
+                exercise['points']      = json.dumps(question['t_knowledge'])
                 exercise['url']         = self.base_url + '/question/detail/' + question['question_id']
                 exercise['sort']        = unicode(sort)
                 paper['exercise_num']   = exercise_num

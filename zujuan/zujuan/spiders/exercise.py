@@ -146,10 +146,10 @@ class ExerciseSpider(scrapy.Spider):
         result = urlparse.urlparse(response.url)
         params = urlparse.parse_qs(result.query)
         #解析返回结果
-        js = json.loads(response.body)
-        lists = js["list"]
+        js     = json.loads(response.body)
+        lists  = js["list"]
         for list in lists:
-            item = Paper()
+            item                 = Paper()
             item['title']        = list['title']
             item['grade']        = self.xd[params['xd'][0]]
             item['subject']      = self.chid[str(list['chid'])]
@@ -162,27 +162,27 @@ class ExerciseSpider(scrapy.Spider):
             item['uploaded_at']  = time.strftime("%Y-%m-%d %H:%M:%S", time_local)
             yield Request(
                 self.base_url + '/paper/detail?pid=' + list['pid'],
-                callback=self.parse_exercise_list,
-                meta={'paper': item},
-                dont_filter=True
+                callback    = self.parse_exercise_list,
+                meta        = {'paper': item},
+                dont_filter = True
             )
 
         if js["pager"]:
             xml_string = html.fromstring(js["pager"])
-            next_link = xml_string.xpath("//div[@class='pagenum']/a[last()]/@href")[0]
+            next_link  = xml_string.xpath("//div[@class='pagenum']/a[last()]/@href")[0]
             if next_link:
                 yield Request(
-                    url=self.base_url + next_link,
-                    callback=self.parse,
-                    dont_filter=True
+                    url         = self.base_url + next_link,
+                    callback    = self.parse,
+                    dont_filter = True
                 )
 
     # 分析试题列表
     def parse_exercise_list(self, response):
-        js = json.loads(response.body)
-        lists = js["content"]
+        js           = json.loads(response.body)
+        lists        = js["content"]
         exercise_num = 0
-        sort = 0
+        sort         = 0
         for list in lists:
             exercise_num += len(list['questions'])
             for question in list['questions']:

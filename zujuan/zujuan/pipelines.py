@@ -41,7 +41,7 @@ class ZujuanPipeline(object):
         # sys.setdefaultencoding('utf-8')
 
     def process_item(self, item, spider):
-        if spider.name == 'zujuan' or spider.name == 'zxls':
+        if spider.name == 'zujuan' or spider.name == 'zxls' or spider.name == 'gzzz':
             # 先判断试卷是否已经存在
             site_id = 202
             paper = item['paper']

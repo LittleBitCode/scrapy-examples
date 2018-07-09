@@ -10,13 +10,17 @@ import json
 from zujuan.papers import Paper
 from zujuan.items import ExerciseItem
 import time
+import urlparse
 
 class ExerciseSpider(scrapy.Spider):
     name = 'zujuan'
     allowed_domains = ['zujuan.21cnjy.com/']
     start_urls = [
         'https://zujuan.21cnjy.com/',
-        'https://zujuan.21cnjy.com/paper/view/'
+        'https://zujuan.21cnjy.com/paper/view/',
+        'https://zujuan.21cnjy.com/paper/paper-category-list?xd=2&chid=2',
+        'https://zujuan.21cnjy.com/paper/paper-sync-list?xd=2&chid=2',
+        'https://zujuan.21cnjy.com/paper/paper-exam-list?xd=2&chid=2'
     ]
     base_url = 'https://zujuan.21cnjy.com'
     xd = {
@@ -136,18 +140,18 @@ class ExerciseSpider(scrapy.Spider):
         "Referer": "https://zujuan.21cnjy.com/",
     }
 
-    def start_requests(self):
-        url = self.base_url + '/paper/paper-category-list?xd=2&chid=2'
-        return [Request(url,callback=self.parse_list)]
-
     # 分析试卷列表
-    def parse_list(self ,response):
+    def parse(self ,response):
+        #获取url参数列表
+        result = urlparse.urlparse(response.url)
+        params = urlparse.parse_qs(result.query)
+        #解析返回结果
         js = json.loads(response.body)
         lists = js["list"]
         for list in lists:
             item = Paper()
             item['title']        = list['title']
-            item['grade']        = u'初中'
+            item['grade']        = self.xd[params['xd'][0]]
             item['subject']      = self.chid[str(list['chid'])]
             item['type']         = list['typeName']
             item['level']        = list['paperlevel']
@@ -156,7 +160,6 @@ class ExerciseSpider(scrapy.Spider):
             item['url']          = self.base_url + list['viewUrl']
             time_local           = time.localtime(int(list['addtime']))
             item['uploaded_at']  = time.strftime("%Y-%m-%d %H:%M:%S", time_local)
-            # print(self.base_url + '/paper/detail?pid=' + list['pid'])
             yield Request(
                 self.base_url + '/paper/detail?pid=' + list['pid'],
                 callback=self.parse_exercise_list,
@@ -170,8 +173,8 @@ class ExerciseSpider(scrapy.Spider):
             if next_link:
                 yield Request(
                     url=self.base_url + next_link,
-                    callback=self.parse_list,
-                    # dont_filter=True
+                    callback=self.parse,
+                    dont_filter=True
                 )
 
     # 分析试题列表
@@ -184,7 +187,7 @@ class ExerciseSpider(scrapy.Spider):
             exercise_num += len(list['questions'])
             for question in list['questions']:
                 sort += 1
-                paper = response.meta['paper']
+                paper                   = response.meta['paper']
                 exercise                = ExerciseItem()
                 exercise['subject']     = paper['subject']
                 exercise['degree']      = self.degree[str(question['difficult_index'])]
@@ -194,12 +197,7 @@ class ExerciseSpider(scrapy.Spider):
                 exercise['options']     = json.dumps(question['options'])
                 exercise['answer']      = question['answer']
                 exercise['method']      = question['explanation']
-                # print()
-                # if question['t_knowledge']:
-                #     for v in question['t_knowledge']:
-                #         print(v)
-
-                exercise['points'] = json.dumps(question['t_knowledge'])
+                exercise['points']      = json.dumps(question['t_knowledge'])
                 exercise['url']         = self.base_url + '/question/detail/' + question['question_id']
                 exercise['sort']        = unicode(sort)
                 paper['exercise_num']   = exercise_num

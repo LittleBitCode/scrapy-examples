@@ -10,6 +10,7 @@ from scrapy.http.cookies import CookieJar
 import urllib
 import time
 import re
+import random
 # 实例化一个cookiejar对象
 cookie_jar = CookieJar()
 
@@ -24,16 +25,15 @@ class ZxlsSpider(scrapy.Spider):
     base_url = 'http://zujuan.zxls.com'
 
     headers = {
-        "Accept": "*/*",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
         "Accept-Encoding": "gzip,deflate",
-        "Accept-Language": "en-US,en;q=0.8,zh-TW;q=0.6,zh;q=0.4",
+        "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
         "Connection": "keep-alive",
         "Content-Type": "application/x-www-form-urlencoded",
         "Host":"zujuan.zxls.com",
         "Origin":"http://zujuan.zxls.com",
-        "Cookie":"ASP.NET_SessionId=c54fr0tqccbfvxkuyrss3jjy; kemu=1",
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36",
-        "Referer": "http://zujuan.zxls.com/Login.aspx?ReturnUrl=%2fIndex.aspx"
+        "Referer": "http://zujuan.zxls.com/Index.aspx"
     }
 
     cid = {
@@ -41,17 +41,16 @@ class ZxlsSpider(scrapy.Spider):
     }
 
     def start_requests(self):
-        url = self.base_url + '/Login.aspx?ReturnUrl=/Index.aspx'
-        return [Request(url, meta = {'cookiejar' : 1},callback = self.login)]
+        return [Request(self.base_url + '/Login.aspx',cookies={'kemu':'1'}, meta = {'cookiejar' : 1},callback = self.login)]
 
     def login(self,response):
         viewState           = Selector(response).xpath('//input[@name="__VIEWSTATE"]/@value').extract()[0]
         viewStateGenerator  = Selector(response).xpath('//input[@name="__VIEWSTATEGENERATOR"]/@value').extract()[0]
-        eventValidation = Selector(response).xpath('//input[@name="__EVENTVALIDATION"]/@value').extract()[0]
+        eventValidation     = Selector(response).xpath('//input[@name="__EVENTVALIDATION"]/@value').extract()[0]
         captcha_img = 'http://zujuan.zxls.com/CheckCode.aspx'
         localPath = '/Users/zhengchaohua/Desktop/images/captcha.png'
         urllib.urlretrieve(captcha_img, localPath)
-        # captcha_value = raw_input('查看captcha.png,有验证码请输入:')
+        captcha_value = raw_input('查看captcha.png,有验证码请输入:')
         formdata = {
                     '__VIEWSTATE'           : viewState,
                     '__VIEWSTATEGENERATOR'  : viewStateGenerator,
@@ -59,19 +58,29 @@ class ZxlsSpider(scrapy.Spider):
                     'txtUserName'           : 'dawnhome',
                     'txtPassword'           : 'mima0125',
                     'CheckBox1'             : 'on',
-                    'ImageButton1.x'        :'38',
-                    'ImageButton1.y'        :'33',
-                    # 'txtYzmCode'            : captcha_value
+                    'ImageButton1.x'        : '125',
+                    'ImageButton1.y'        : '17',
+                    'txtYzmCode'            : captcha_value
                    }
+        print(response.url)
+        print(response.meta['cookiejar'])
+        print(formdata)
         return [FormRequest.from_response(
             response,
-            meta        ={'cookiejar': response.meta['cookiejar']},
-            headers     =self.headers,
-            formdata    =formdata,
+            meta        = {'cookiejar': response.meta['cookiejar']},
+            headers     = self.headers,
+            formdata    = formdata,
             callback    = self.after_login
         )]
 
+
     def after_login(self,response):
+        # 请求Cookie
+        Cookie2 = response.request.headers.getlist('Cookie')
+        # 响应Cookie
+        Cookie = response.headers.getlist('Set-Cookie')
+        print(u'登录时携带请求的Cookies：', Cookie2)
+        return
         yield FormRequest(
                 self.base_url + '/Web/ashx_/PaperSearch.ashx',
                 headers=self.headers,
@@ -87,8 +96,6 @@ class ZxlsSpider(scrapy.Spider):
                 # dont_filter=True
         )
 
-
-
     def parse_paper_list(self,response):
         js = json.loads(response.body)
         xml_string = html.fromstring(js['data'])
@@ -101,15 +108,15 @@ class ZxlsSpider(scrapy.Spider):
                 year = xml_string.xpath("//tr['index']/td[5]/text()")[index]
                 yield Request(
                     url,
-                    meta={'year':year},
+                    meta={'year':year,"cookiejar":response.meta["cookiejar"]},
                     callback=self.parse_exercise_list,
                     # dont_filter=True
                 )
         # 下一页
-        # page_string  = html.fromstring(js['pager'])
-        # current_page = page_string.xpath("//a[@class='change']/text()")[0]
-        # total_page = int( int(js['total']) / 10) + 1
-        # next_page = int(current_page) + 1
+        page_string  = html.fromstring(js['pager'])
+        current_page = page_string.xpath("//a[@class='change']/text()")[0]
+        total_page = int( int(js['total']) / 10) + 1
+        next_page = int(current_page) + 1
         # if next_page <= total_page:
         #     yield FormRequest(
         #         self.base_url + '/Web/ashx_/PaperSearch.ashx',
@@ -136,9 +143,6 @@ class ZxlsSpider(scrapy.Spider):
         exercise_num = response.xpath("//div[@class='xiaobiaoti']/span[5]/text()").extract_first().replace(u'题数：', '')
         views        = response.xpath("//div[@class='xiaobiaoti']/span[6]/text()").extract_first().replace(u'浏览数：', '')
         uploaded_at  = response.meta['year']
-
-        # st = time.strptime(str(uploaded_at)+" 00:00:00", '%Y-%m-%d %H:%M:%S')
-        #         # uploaded_at = time.strftime("%Y-%m-%d %H:%M:%S", st)
         paper = {
             'url'           : url,
             'title'         : title,
@@ -149,36 +153,48 @@ class ZxlsSpider(scrapy.Spider):
             'year'          : year,
             'views'         : views,
             'exercise_num'  : exercise_num,
-            'year'          : year,
             'uploaded_at'   : uploaded_at,
         }
         #题型
-        exercise_types = response.xpath("//div[@id='subjectList']/p/text()").extract()
-        for exercise_type in exercise_types:
-            if exercise_type != None:
-                # exercise_type = str(exercise_type)
-                print(exercise_type)
-                exercises  = response.xpath("//div[@class='subject']")
-                sort = 0
-                for exercise in exercises:
-                    if exercise != None:
-                        description = exercise.xpath(".//tr[1]/td[2]/h3").extract_first()
-                        detail = exercise.xpath(".//tr[1]/td[2]/h3/text()").extract_first()
-                        if detail != None:
-                            sort += 1
-                            options     = json.dumps(exercise.xpath(".//td[@class='sstd']/text()").extract())
-                            yield {
-                                'subject'      : subject,
-                                'degree'       : None,
-                                'source_id'    : None,
-                                'type'         : exercise_type,
-                                'description'  : description,
-                                'options'      : options,
-                                'answer'       : None,
-                                'method'       : None,
-                                'points'       : None,
-                                'url'          : None,
-                                'sort'         : sort,
-                                'paper'        : paper
-                            }
+        # exercise_types = response.xpath("//div[@id='subjectList']/p/text()").extract()
+        exercise_types = response.xpath("//div[@id='subjectList']/p")
+        # for index,exercise_type in enumerate(exercise_types):
+        # exercise_type = response.xpath("//div[@id='subjectList']/p/text()").extract()[index]
+        exercises  = response.xpath(".//div[@class='subject']")
+        sort = 0
+        for index,exercise in enumerate(exercises):
+            if exercise != None:
+                description = exercise.xpath(".//tr[1]/td[2]").extract_first()
+                detail = exercise.xpath(".//tr[1]/td[2]/h3/text()").extract_first()
+                options = json.dumps(exercise.xpath(".//td[@class='sstd']/text()").extract())
+                source_id = exercise.xpath("//input[@class='ppids']/@value").extract()[index]
+                if detail != None or options != None:
+                    sort += 1
+                    exercise = {
+                        'subject'      : subject,
+                        'degree'       : None,
+                        'source_id'    : source_id,
+                        'type'         : None,
+                        'description'  : description,
+                        'options'      : options,
+                        'answer'       : None,
+                        'method'       : None,
+                        'points'       : None,
+                        'url'          : None,
+                        'sort'         : sort,
+                        'paper'        : paper
+                    }
+                    yield Request(
+                            self.base_url+'/Web/ashx_/ProblemAttend.ashx?id='+source_id,
+                            meta={'exercise':exercise,"cookiejar":response.meta["cookiejar"]},
+                            callback=self.parse_exercise_detail
+                        )
 
+
+    def parse_exercise_detail(self,response):
+        # http://zujuan.zxls.com/Web/ashx_/ProblemAttend.ashx?id=   问题解析
+        print('---')
+        print(response.url)
+        return
+
+        print('---')

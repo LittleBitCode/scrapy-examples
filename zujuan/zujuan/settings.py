@@ -111,3 +111,7 @@ MYSQL_DBNAME = "spider"
 # }
 #
 # DUPEFILTER_CLASS = 'scrapy_splash.SplashAwareDupeFilter'
+# 自动传递cookies与打印cookies设置
+# Disable cookies (enabled by default)
+COOKIES_ENABLED = True
+COOKIES_DEBUG = True

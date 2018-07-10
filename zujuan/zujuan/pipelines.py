@@ -8,28 +8,42 @@
 import pymysql
 import logging
 import json
+import re
+from scrapy import Request
+from scrapy.pipelines.images import ImagesPipeline
+from scrapy.exceptions import DropItem
+import codecs
+import requests
+import os
+
+class DownloadImagesPipeline(ImagesPipeline):
+
+    def get_media_requests(self, item, info):
+        for image_url in item['image_urls']:
+            image_url = "http://" + image_url
+            yield Request(image_url)
+
+    def item_completed(self, results, item, info):
+        image_paths = [x['path'] for ok, x in results if ok]  # ok判断是否下载成功
+        if not image_paths:
+            raise DropItem("Item contains no images")
+        # item['image_paths'] = image_paths
+        return item
 
 
 class ZujuanPipeline(object):
     paper_sql = """
                    insert into papers(`title`   ,`site_id` ,`year` ,`level`        ,
                                       `subject` ,`grade`   ,`type` ,`exercise_num` ,
-                                      `views`,`uploaded_at`,`url`
-                                      )
-                         values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-                """
-    zxls_paper_sql = """
-                   insert into papers(`title`   
-                                      )
-                         values(%s)
+                                      `views`,`uploaded_at`,`url`)
+                   values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                 """
 
     exercise_sql = """
                       insert into exercises( `subject`  ,`type`        , `degree`    ,`source_id`,
                                              `paper_id` ,`description` ,`method_img` ,`answer_img`,
-                                             `options`  ,`points`      ,`url`        ,`sort`
-                                            )
-                             values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                                             `options`  ,`points`      ,`url`        ,`sort`)
+                      values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                    """
     paper_update_sql = """
                           update papers set `exercise_num` = %s where `url` = %s
@@ -66,7 +80,8 @@ class ZujuanPipeline(object):
                                     )
                 paper_id = self.cursor.lastrowid
             else:
-                self.cursor.execute(self.paper_update_sql,(paper['exercise_num'],paper['url']))
+                if spider.name == 'zujuan':
+                    self.cursor.execute(self.paper_update_sql,(paper['exercise_num'],paper['url']))
                 paper_id = row[0]
 
             print(">>>>>>>>>>>>>> new paper id: %s" % (paper_id))

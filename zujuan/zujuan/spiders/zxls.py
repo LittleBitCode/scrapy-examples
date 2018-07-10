@@ -11,6 +11,10 @@ import urllib
 import time
 import re
 import random
+from bs4 import BeautifulSoup
+import sys
+reload(sys)
+sys.setdefaultencoding("utf-8")
 # 实例化一个cookiejar对象
 cookie_jar = CookieJar()
 
@@ -40,17 +44,24 @@ class ZxlsSpider(scrapy.Spider):
         1 : '历史'
     }
 
+    exercise_type = ''
+
+    cookies = {
+        'ASP.NET_SessionId':'1n1dz5eagxjsqt0pbm3uwzw5',
+        'kemu':'1'
+    }
+    # cookies = {}
     def start_requests(self):
-        return [Request(self.base_url + '/Login.aspx',cookies={'kemu':'1'}, meta = {'cookiejar' : 1},callback = self.login)]
+        return [Request(self.base_url + '/Login.aspx?ReturnUrl=/Index.aspx',cookies={'kemu':'1'}, meta = {'cookiejar' : 1},callback = self.login)]
 
     def login(self,response):
         viewState           = Selector(response).xpath('//input[@name="__VIEWSTATE"]/@value').extract()[0]
         viewStateGenerator  = Selector(response).xpath('//input[@name="__VIEWSTATEGENERATOR"]/@value').extract()[0]
         eventValidation     = Selector(response).xpath('//input[@name="__EVENTVALIDATION"]/@value').extract()[0]
-        captcha_img         = 'http://zujuan.zxls.com/CheckCode.aspx'
+        captcha_img         = self.base_url + '/' + Selector(response).xpath("//img[@id='imgcode']/@src").extract()[0]
         localPath           = '/Users/zhengchaohua/Desktop/images/captcha.png'
         urllib.urlretrieve(captcha_img, localPath)
-        captcha_value       = raw_input('查看captcha.png,有验证码请输入:')
+        # captcha_value       = raw_input('查看captcha.png,有验证码请输入:')
         formdata = {
                     '__VIEWSTATE'           : viewState,
                     '__VIEWSTATEGENERATOR'  : viewStateGenerator,
@@ -58,9 +69,9 @@ class ZxlsSpider(scrapy.Spider):
                     'txtUserName'           : 'dawnhome',
                     'txtPassword'           : 'mima0125',
                     'CheckBox1'             : 'on',
-                    'ImageButton1.x'        : '125',
-                    'ImageButton1.y'        : '17',
-                    'txtYzmCode'            : captcha_value
+                    # 'ImageButton1.x'        : '136',
+                    # 'ImageButton1.y'        : '30',
+                    # 'txtYzmCode'            : captcha_value
                    }
         return [FormRequest.from_response(
             response,
@@ -72,15 +83,19 @@ class ZxlsSpider(scrapy.Spider):
 
 
     def after_login(self,response):
-        # 请求Cookie
-        Cookie2 = response.request.headers.getlist('Cookie')
-        # 响应Cookie
-        Cookie  = response.headers.getlist('Set-Cookie')
-        print(u'登录时携带请求的Cookies：', Cookie2)
-        return
+        cookie_strings = response.request.headers.getlist('Cookie')[0]
+        cookies = str(cookie_strings).split(';')
+        cookie_dic = {}
+        for cookie in cookies:
+            key = cookie.split('=')[0].replace(' ', '')
+            value = cookie.split('=')[1]
+            cookie_dic[key] = value
+        # self.cookies = cookie_dic
+        print(self.cookies)
         yield FormRequest(
                 self.base_url + '/Web/ashx_/PaperSearch.ashx',
                 headers=self.headers,
+                cookies=self.cookies,
                 meta = {"cookiejar":response.meta["cookiejar"]},
                 formdata = {
                             'cid' : '1',
@@ -90,7 +105,7 @@ class ZxlsSpider(scrapy.Spider):
                             'rows': '10'
                            },
                 callback = self.parse_paper_list,
-                # dont_filter=True
+                dont_filter=True
         )
 
     def parse_paper_list(self,response):
@@ -105,40 +120,42 @@ class ZxlsSpider(scrapy.Spider):
                 year = xml_string.xpath("//tr['index']/td[5]/text()")[index]
                 yield Request(
                     url,
-                    meta     ={'year':year,"cookiejar":response.meta["cookiejar"]},
-                    callback =self.parse_exercise_list,
-                    # dont_filter=True
+                    cookies  = self.cookies,
+                    meta     = {'year':year,"cookiejar":response.meta["cookiejar"]},
+                    callback = self.parse_exercise_list,
+                    dont_filter=True
                 )
         # 下一页
         page_string  = html.fromstring(js['pager'])
         current_page = page_string.xpath("//a[@class='change']/text()")[0]
         total_page   = int( int(js['total']) / 10) + 1
         next_page    = int(current_page) + 1
-        # if next_page <= total_page:
-        #     yield FormRequest(
-        #         self.base_url + '/Web/ashx_/PaperSearch.ashx',
-        #         headers=self.headers,
-        #         meta={"cookiejar": response.meta["cookiejar"]},
-        #         formdata={
-        #             'cid' : '1',
-        #             'gr'  : '高三级',
-        #             'cty' : '高考真题',
-        #             'page': str(next_page),
-        #             'rows': '10'
-        #         },
-        #         callback=self.parse_paper_list,
-        #         # dont_filter=True
-        #     )
+        if next_page <= total_page:
+            yield FormRequest(
+                self.base_url + '/Web/ashx_/PaperSearch.ashx',
+                cookies  = self.cookies,
+                headers  = self.headers,
+                meta     = {"cookiejar": response.meta["cookiejar"]},
+                formdata = {
+                    'cid' : '1',
+                    'gr'  : '高三级',
+                    'cty' : '高考真题',
+                    'page': str(next_page),
+                    'rows': '10'
+                },
+                callback = self.parse_paper_list,
+                dont_filter=True
+            )
 
     def parse_exercise_list(self, response):
         url          = response.url
         title        = response.xpath("//div[@class='sjbt']/h1/text()").extract_first()
         subject      = self.cid[1]
-        grade        = response.xpath("//div[@class='xiaobiaoti']/span[1]/text()").extract_first().replace(u'适用年级：', '')
-        type         = response.xpath("//div[@class='xiaobiaoti']/span[2]/text()").extract_first().replace(u'试卷类型：', '')
-        year         = response.xpath("//div[@class='xiaobiaoti']/span[4]/text()").extract_first().replace(u'试卷年份：', '').replace(u'年','')
-        exercise_num = response.xpath("//div[@class='xiaobiaoti']/span[5]/text()").extract_first().replace(u'题数：', '')
-        views        = response.xpath("//div[@class='xiaobiaoti']/span[6]/text()").extract_first().replace(u'浏览数：', '')
+        grade        = response.xpath("//div[@class='xiaobiaoti']/span[1]/text()").extract_first().replace(u'适用年级：' , '')
+        type         = response.xpath("//div[@class='xiaobiaoti']/span[2]/text()").extract_first().replace(u'试卷类型：' , '')
+        year         = response.xpath("//div[@class='xiaobiaoti']/span[4]/text()").extract_first().replace(u'试卷年份：' , '').replace(u'年','')
+        exercise_num = response.xpath("//div[@class='xiaobiaoti']/span[5]/text()").extract_first().replace(u'题数：'    , '')
+        views        = response.xpath("//div[@class='xiaobiaoti']/span[6]/text()").extract_first().replace(u'浏览数：'  , '')
         uploaded_at  = response.meta['year']
         paper = {
             'url'           : url,
@@ -152,43 +169,61 @@ class ZxlsSpider(scrapy.Spider):
             'exercise_num'  : exercise_num,
             'uploaded_at'   : uploaded_at,
         }
-        #题型
-        # exercise_types = response.xpath("//div[@id='subjectList']/p/text()").extract()
-        exercise_types = response.xpath("//div[@id='subjectList']/p")
-        # for index,exercise_type in enumerate(exercise_types):
-        # exercise_type = response.xpath("//div[@id='subjectList']/p/text()").extract()[index]
-        exercises  = response.xpath(".//div[@class='subject']")
+        soup = BeautifulSoup(response.body,'lxml')
         sort = 0
-        for index,exercise in enumerate(exercises):
-            if exercise != None:
-                description = exercise.xpath(".//tr[1]/td[2]").extract_first()
-                detail      = exercise.xpath(".//tr[1]/td[2]/h3/text()").extract_first()
-                options     = json.dumps(exercise.xpath(".//td[@class='sstd']/text()").extract())
-                source_id   = exercise.xpath("//input[@class='ppids']/@value").extract()[index]
-                if detail != None or options != None:
-                    sort += 1
-                    exercise = {
-                        'subject'      : subject,
-                        'degree'       : None,
-                        'source_id'    : source_id,
-                        'type'         : None,
-                        'description'  : description,
-                        'options'      : options,
-                        'answer'       : None,
-                        'method'       : None,
-                        'points'       : None,
-                        'url'          : None,
-                        'sort'         : sort,
-                        'paper'        : paper
-                    }
-                    yield Request(
-                            self.base_url+'/Web/ashx_/ProblemAttend.ashx?id='+source_id,
-                            meta     = {'exercise':exercise,"cookiejar":response.meta["cookiejar"]},
-                            callback = self.parse_exercise_detail
-                        )
+        for child in soup.find('div',id='subjectList').contents:
+            if child.name == None:
+                continue
+            if child.name == 'p':
+                self.exercise_type = str(child.string).split('、')[-1]
+            if child.name == 'div':
+                tds         = child.find_all('td')
+                description = str(tds[1])
+                imgs = child.find_all('img')
+                if len(imgs) > 0:
+                    for img in imgs:
+                        img_url = self.base_url+'/'+img['src']
+                        print(img_url)
 
+                return
+                options     = child.find_all('td',attrs={'class':'sstd'})
+                options_string = '{'
+                for index,option in enumerate(options):
+                    if index+1 < len(options):
+                        options_string += str(option.string)+','
+                    else:
+                        options_string += str(option.string)
+                options   = json.dumps(options_string+'}')
+                source_id = child.find_all('input')[0]['value']
+                sort += 1
+                exercise = {
+                    'subject'      : subject,
+                    'degree'       : None,
+                    'source_id'    : source_id,
+                    'type'         : self.exercise_type,
+                    'description'  : description,
+                    'options'      : options,
+                    'answer'       : None,
+                    'method'       : None,
+                    'points'       : None,
+                    'url'          : None,
+                    'sort'         : sort,
+                    'paper'        : paper
+                }
+                yield Request(
+                        self.base_url+'/Web/ashx_/ProblemAttend.ashx?id=' + source_id,
+                        cookies  = self.cookies,
+                        meta     = {'exercise':exercise,"cookiejar":response.meta["cookiejar"]},
+                        callback = self.parse_exercise_detail
+                    )
 
     def parse_exercise_detail(self,response):
-        # http://zujuan.zxls.com/Web/ashx_/ProblemAttend.ashx?id=   问题解析
-        print(response.url)
-        return
+        exercise           = response.meta['exercise']
+        js                 = json.loads(response.body)
+        xml_string         = html.fromstring(js['data'])
+        exercise['points'] = str(xml_string.xpath("//p[3]/text()")[0]).split('】')[-1].split('；')
+        exercise['method'] = str(xml_string.xpath("//p[5]/text()")[0]).split('】')[-1]
+        exercise['answer'] = str(xml_string.xpath("//p[7]/text()")[0]).split('】')[-1]
+        exercise['degree'] = str(xml_string.xpath("//p[last()-2]/text()")[0]).split('】')[-1]
+        yield exercise
+

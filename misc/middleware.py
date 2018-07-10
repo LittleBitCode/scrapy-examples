@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from proxy import PROXIES, FREE_PROXIES
 from agents import AGENTS
 import logging as log
@@ -14,6 +15,7 @@ class CustomHttpProxyFromMysqlMiddleware(object):
             p = random.choice(self.proxies)
             try:
                 request.meta['proxy'] = "http://%s" % p['ip_port']
+                print('current proxy:')
                 print(request.meta['proxy'])
             except Exception, e:
                 #log.msg("Exception %s" % e, _level=log.CRITICAL)
@@ -60,3 +62,17 @@ class CustomUserAgentMiddleware(object):
     def process_request(self, request, spider):
         agent = random.choice(AGENTS)
         request.headers['User-Agent'] = agent
+
+
+#写一个中间件来处理图片下载的防盗链：
+class DownloadImageMiddleware(object):
+    def process_request(self, request, spider):
+        '''
+        设置headers和切换请求头
+        :param request: 请求体
+        :param spider: spider对象
+        :return: None
+        '''
+        referer = request.meta.get('referer', None)
+        if referer:
+            request.headers['referer'] = referer

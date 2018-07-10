@@ -1,2 +1,2 @@
 import sys
-print(sys.getdefaultencoding())
+print(sys.getdefaultencoding('utf-8'))

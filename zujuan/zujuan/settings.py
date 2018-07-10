@@ -115,7 +115,7 @@ MYSQL_DBNAME  = "spider"
 # SPLASH_URL='http://127.0.0.1:8050'
 # DUPEFILTER_CLASS = 'scrapy_splash.SplashAwareDupeFilter'
 
-IMAGES_STORE      = './myimages'
+IMAGES_STORE      = 'resources'
 # 该字段的值为ImageItem中定义的存储图片链接的image_urls字段
 #IMAGES_URLS_FIELD='image_urls'
 # 该字段的值为ImageItem中定义的存储图片信息的images字段

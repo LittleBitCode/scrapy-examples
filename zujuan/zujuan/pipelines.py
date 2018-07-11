@@ -16,37 +16,48 @@ import codecs
 import requests
 import os
 from zujuan.items import ImageItem,ExerciseItem
+import time
 
 class DownloadImagesPipeline(ImagesPipeline):
 
-    #重写保存图片路径方法
-    # def file_path(self, request, response=None, info=None):
-    #     """
-    #     :param request: 每一个图片下载管道请求
-    #     :param response:
-    #     :param info:
-    #     :param strip :清洗Windows系统的文件夹非法字符，避免无法创建目录
-    #     :return: 每套图的分类目录
-    #     """
-    #     item = request.meta['item']
-    #     FolderName = item['name']
-    #     image_guid = request.url.split('/')[-1]
-    #     filename = u'full/{0}/{1}'.format(FolderName, image_guid)
-    #     return filename
-
     def get_media_requests(self, item, info):
-        print('1111111111111111111111111111111')
-        return
-        # for image_url in item['image_urls']:
-        #     image_url = "http://" + image_url
-        #     yield Request(image_url)
+        image_urls = {
+            'answer': item['answer'],
+            'method': item['method']
+        }
+        for key in dict(image_urls).keys():
+            if image_urls[key] != None and str(image_urls[key]).startswith('http'):
+                print('-------------  开始下载图片%s -----------' % ( image_urls[key]))
+                yield Request(
+                    image_urls[key],
+                    meta={
+                        'item': item,
+                        'key' : key
+                    }
+                )  # 添加meta是为了下面重命名文件名使用
+
+    # 重写保存图片路径方法
+    def file_path(self, request, response=None, info=None):
+        item        = request.meta['item']
+        firstFolder = request.meta['key']
+        image_guid  = time.strftime("%Y-%m-%d", time.localtime(time.time()))
+        name        = item['source_id']
+        ext         = str(request.url.split('/')[-1].split('.')[-1]).split('?')[0]
+        image_name  = name + '.' + ext
+        filename    = u'full/{0}/{1}'.format(firstFolder, image_name)
+        return filename
 
     def item_completed(self, results, item, info):
-        print('22222222222222222222222222222')
-        # image_paths = [x['path'] for ok, x in results if ok]  # ok判断是否下载成功
+        image_paths = [x['path'] for ok, x in results if ok]  # ok判断是否下载成功
         # if not image_paths:
         #     raise DropItem("Item contains no images")
-        # item['image_paths'] = image_paths
+        for image_path in image_paths:
+            folder = str(image_path).split('/')[1]
+            if folder == 'answer':
+                item['answer'] = image_path
+            elif folder == 'method':
+                item['method'] = image_path
+        print('------------ 图片下载完成 %s ------------' % image_paths)
         return item
 
 
@@ -55,7 +66,7 @@ class ZujuanPipeline(object):
                    insert into papers(`title`,`site_id`,`year`,`level`,`subject`,`grade`,`type`,`exercise_num`,`views`,`uploaded_at`,`url`)values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                 """
     exercise_sql = """
-                      insert into exercises(`subject`,`type`,`degree`,`source_id`,`paper_id`,`description`,`method`,`answer`,`options`,`points`,`url`,`sort`)values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                      insert into exercises(`subject`,`type`,`degree`,`source_id`,`paper_id`,`description`,`method_img`,`answer_img`,`options`,`points`,`url`,`sort`)values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                    """
     paper_update_sql = """
                           update papers set `exercise_num` = %s where `url` = %s
@@ -65,7 +76,7 @@ class ZujuanPipeline(object):
         self.settings = settings
 
     def process_item(self, item, spider):
-        if spider.name == 'zujuan' or spider.name == 'zxls' or spider.name == 'gzzz':
+        if spider.name == 'zujuan' or spider.name == 'zxls':
             # 先判断试卷是否已经存在
             site_id = 202
             paper = item['paper']
@@ -114,34 +125,6 @@ class ZujuanPipeline(object):
                 )
             )
             print(">>>>>>>>>>>>>>>>>>>>>>>> store success <<<<<<<<<<<<<<<<<<<<<<<<")
-        # elif spider.name == 'zxls':
-        #     print('---存数据---')
-        #     # 先判断试卷是否已经存在
-        #     site_id = 203
-        #     paper = item['paper']
-        #     self.cursor.execute("select id from papers where url='%s'" % (paper['url']))
-        #     row = self.cursor.fetchone()
-        #     print('===========')
-        #     print('rowcount:%s' % self.cursor.rowcount)
-        #     print('=========')
-        #     if self.cursor.rowcount == 0:
-        #         self.cursor.execute(self.paper_sql,
-        #                             (paper['title'],
-        #                              site_id,
-        #                              paper['year'],
-        #                              1,
-        #                              paper['subject'],
-        #                              paper['grade'],
-        #                              paper['type'],
-        #                              paper['exercise_num'],
-        #                              paper['views'],
-        #                              paper['uploaded_at'],
-        #                              paper['url'])
-        #                             )
-        #         paper_id = self.cursor.lastrowid
-        #     else:
-        #         self.cursor.execute(self.paper_update_sql, (paper['exercise_num'], paper['url']))
-        #         paper_id = row[0]
         else:
             spider.log('Undefined name: %s' % spider.name)
 

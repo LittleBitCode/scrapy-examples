@@ -11,8 +11,8 @@ from zujuan.papers import Paper
 from zujuan.items import ExerciseItem
 import time
 import urlparse
-
-class ExerciseSpider(scrapy.Spider):
+#CrawlSpider用来遍布抓取，通过rules来查找所有符合的URL来爬去信息
+class ExerciseSpider(scrapy.Spider):  #抓取单一页面，没有rules
     name = 'zujuan'
     allowed_domains = ['zujuan.21cnjy.com/']
     start_urls = [
@@ -166,15 +166,15 @@ class ExerciseSpider(scrapy.Spider):
                 dont_filter = True
             )
 
-        if js["pager"]:
-            xml_string = html.fromstring(js["pager"])
-            next_link  = xml_string.xpath("//div[@class='pagenum']/a[last()]/@href")[0]
-            if next_link:
-                yield Request(
-                    url         = self.base_url + next_link,
-                    callback    = self.parse,
-                    dont_filter = True
-                )
+        # if js["pager"]:
+        #     xml_string = html.fromstring(js["pager"])
+        #     next_link  = xml_string.xpath("//div[@class='pagenum']/a[last()]/@href")[0]
+        #     if next_link:
+        #         yield Request(
+        #             url         = self.base_url + next_link,
+        #             callback    = self.parse,
+        #             dont_filter = True
+        #         )
 
     # 分析试题列表
     def parse_exercise_list(self, response):

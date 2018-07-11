@@ -52,7 +52,12 @@ class ZxlsSpider(scrapy.Spider):
     }
     # cookies = {}
     def start_requests(self):
-        return [Request(self.base_url + '/Login.aspx?ReturnUrl=/Index.aspx',cookies={'kemu':'1'}, meta = {'cookiejar' : 1},callback = self.login)]
+        return [Request(
+            self.base_url + '/Login.aspx?ReturnUrl=/Index.aspx',
+            cookies  = {'kemu':'1'},
+            meta     = {'cookiejar' : 1},
+            callback = self.login
+        )]
 
     def login(self,response):
         viewState           = Selector(response).xpath('//input[@name="__VIEWSTATE"]/@value').extract()[0]
@@ -80,7 +85,6 @@ class ZxlsSpider(scrapy.Spider):
             formdata    = formdata,
             callback    = self.after_login
         )]
-
 
     def after_login(self,response):
         cookie_strings = response.request.headers.getlist('Cookie')[0]

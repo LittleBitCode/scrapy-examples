@@ -122,8 +122,9 @@ MYSQL_DBNAME  = "spider"
 
 # SPLASH_URL='http://127.0.0.1:8050'
 # DUPEFILTER_CLASS = 'scrapy_splash.SplashAwareDupeFilter'
-
-IMAGES_STORE      = 'resources'
+#工程根目录
+project_dir   = os.path.dirname(__file__)
+IMAGES_STORE  = os.path.join(project_dir, 'resources')
 # 该字段的值为ImageItem中定义的存储图片链接的image_urls字段
 #IMAGES_URLS_FIELD='image_urls'
 # 该字段的值为ImageItem中定义的存储图片信息的images字段
@@ -131,10 +132,10 @@ IMAGES_STORE      = 'resources'
 # 避免下载最近90天已经下载过的文件内容,单位:天(可选)
 # IMAGES_EXPIRES    = 90
 # 设置图片缩略图(可选)
-IMAGES_THUMBS = {
-    'small' : (50, 50),
-    'big'   : (250, 250),
-}
+# IMAGES_THUMBS = {
+#     'small' : (50, 50),
+#     'big'   : (250, 250),
+# }
 # 图片过滤器，最小高度和宽度，低于此尺寸不下载(可选)
 #IMAGES_MIN_HEIGHT = 100
 #IMAGES_MIN_WIDTH  = 100

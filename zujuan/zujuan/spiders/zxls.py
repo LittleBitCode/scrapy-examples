@@ -47,7 +47,7 @@ class ZxlsSpider(scrapy.Spider):
     exercise_type = ''
 
     cookies = {
-        'ASP.NET_SessionId':'1n1dz5eagxjsqt0pbm3uwzw5',
+        'ASP.NET_SessionId':'4v4kzhdkqda3vp5dhedkb014',
         'kemu':'1'
     }
     # cookies = {}
@@ -174,33 +174,34 @@ class ZxlsSpider(scrapy.Spider):
         for child in soup.find('div',id='subjectList').contents:
             if child.name == None:
                 continue
-            if child.name == 'p':
-                self.exercise_type = str(child.string).split('、')[-1]
+            # if child.name == 'p':
+                # self.exercise_type = str(child.string).split('、')[-1]
             if child.name == 'div':
                 tds         = child.find_all('td')
                 description = str(tds[1])
-                imgs = child.find_all('img')
-                if len(imgs) > 0:
-                    for img in imgs:
-                        img_url = self.base_url+'/'+img['src']
-                        print(img_url)
+                # imgs = child.find_all('img')
+                # if len(imgs) > 0:
+                #     for img in imgs:
+                #         img_url = self.base_url+'/'+img['src']
+                #         print(img_url)
 
-                return
                 options     = child.find_all('td',attrs={'class':'sstd'})
-                options_string = '{'
+                options_string = {}
+                if len(options) > 0:
+                    exercise_type = '单选题'
+                else:
+                    exercise_type = '材料阅读'
                 for index,option in enumerate(options):
-                    if index+1 < len(options):
-                        options_string += str(option.string)+','
-                    else:
-                        options_string += str(option.string)
-                options   = json.dumps(options_string+'}')
+                    string = chr(ord(str(int(index))) + 17)
+                    options_string[string] = str(option).split('．')[-1]
+                options   = json.dumps(options_string)
                 source_id = child.find_all('input')[0]['value']
                 sort += 1
                 exercise = {
                     'subject'      : subject,
                     'degree'       : None,
                     'source_id'    : source_id,
-                    'type'         : self.exercise_type,
+                    'type'         : exercise_type,
                     'description'  : description,
                     'options'      : options,
                     'answer'       : None,
@@ -218,12 +219,29 @@ class ZxlsSpider(scrapy.Spider):
                     )
 
     def parse_exercise_detail(self,response):
-        exercise           = response.meta['exercise']
-        js                 = json.loads(response.body)
-        xml_string         = html.fromstring(js['data'])
-        exercise['points'] = str(xml_string.xpath("//p[3]/text()")[0]).split('】')[-1].split('；')
-        exercise['method'] = str(xml_string.xpath("//p[5]/text()")[0]).split('】')[-1]
-        exercise['answer'] = str(xml_string.xpath("//p[7]/text()")[0]).split('】')[-1]
-        exercise['degree'] = str(xml_string.xpath("//p[last()-2]/text()")[0]).split('】')[-1]
-        yield exercise
+        exercise   = response.meta['exercise']
+        js         = json.loads(response.body)
+        xml_string = html.fromstring(js['data'])
+        points     = str(xml_string.xpath("//p[3]/text()")[0]).split('】')[-1].split('；')
+        points_dics= {}
+        for index,point in enumerate(points):
+            points_dics[index] = point
+        points     = json.dumps(points_dics)
+        method     = str(xml_string.xpath("//p[6]/text()")[0])
+        answer     = str(xml_string.xpath("//p[7]/text()")[0]).split('】')[-1]
+        degree     = str(xml_string.xpath("//p[last()-2]/text()")[0]).split('】')[-1]
+        yield {
+            'subject'       : exercise['subject'],
+            'degree'        : degree,
+            'source_id'     : exercise['source_id'],
+            'type'          : exercise['type'],
+            'description'   : exercise['description'],
+            'options'       : exercise['options'],
+            'answer'        : answer,
+            'method'        : method,
+            'points'        : points,
+            'url'           : 'url',
+            'sort'          : exercise['sort'],
+            'paper'         : exercise['paper']
+        }
 

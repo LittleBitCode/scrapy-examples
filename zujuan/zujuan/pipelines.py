@@ -15,35 +15,47 @@ from scrapy.exceptions import DropItem
 import codecs
 import requests
 import os
+from zujuan.items import ImageItem,ExerciseItem
 
 class DownloadImagesPipeline(ImagesPipeline):
 
+    #重写保存图片路径方法
+    # def file_path(self, request, response=None, info=None):
+    #     """
+    #     :param request: 每一个图片下载管道请求
+    #     :param response:
+    #     :param info:
+    #     :param strip :清洗Windows系统的文件夹非法字符，避免无法创建目录
+    #     :return: 每套图的分类目录
+    #     """
+    #     item = request.meta['item']
+    #     FolderName = item['name']
+    #     image_guid = request.url.split('/')[-1]
+    #     filename = u'full/{0}/{1}'.format(FolderName, image_guid)
+    #     return filename
+
     def get_media_requests(self, item, info):
-        for image_url in item['image_urls']:
-            image_url = "http://" + image_url
-            yield Request(image_url)
+        print('1111111111111111111111111111111')
+        return
+        # for image_url in item['image_urls']:
+        #     image_url = "http://" + image_url
+        #     yield Request(image_url)
 
     def item_completed(self, results, item, info):
-        image_paths = [x['path'] for ok, x in results if ok]  # ok判断是否下载成功
-        if not image_paths:
-            raise DropItem("Item contains no images")
+        print('22222222222222222222222222222')
+        # image_paths = [x['path'] for ok, x in results if ok]  # ok判断是否下载成功
+        # if not image_paths:
+        #     raise DropItem("Item contains no images")
         # item['image_paths'] = image_paths
         return item
 
 
 class ZujuanPipeline(object):
     paper_sql = """
-                   insert into papers(`title`   ,`site_id` ,`year` ,`level`        ,
-                                      `subject` ,`grade`   ,`type` ,`exercise_num` ,
-                                      `views`,`uploaded_at`,`url`)
-                   values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                   insert into papers(`title`,`site_id`,`year`,`level`,`subject`,`grade`,`type`,`exercise_num`,`views`,`uploaded_at`,`url`)values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                 """
-
     exercise_sql = """
-                      insert into exercises( `subject`  ,`type`        , `degree`    ,`source_id`,
-                                             `paper_id` ,`description` ,`method_img` ,`answer_img`,
-                                             `options`  ,`points`      ,`url`        ,`sort`)
-                      values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                      insert into exercises(`subject`,`type`,`degree`,`source_id`,`paper_id`,`description`,`method`,`answer`,`options`,`points`,`url`,`sort`)values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                    """
     paper_update_sql = """
                           update papers set `exercise_num` = %s where `url` = %s
@@ -51,8 +63,6 @@ class ZujuanPipeline(object):
 
     def __init__(self, settings):
         self.settings = settings
-        # reload(sys)  # 2
-        # sys.setdefaultencoding('utf-8')
 
     def process_item(self, item, spider):
         if spider.name == 'zujuan' or spider.name == 'zxls' or spider.name == 'gzzz':
@@ -61,9 +71,9 @@ class ZujuanPipeline(object):
             paper = item['paper']
             self.cursor.execute("select id from papers where url='%s'" % (paper['url']))
             row = self.cursor.fetchone()
-            print('===========')
+            print('===================')
             print('rowcount:%s' % self.cursor.rowcount)
-            print('=========')
+            print('===================')
             if self.cursor.rowcount == 0:
                 self.cursor.execute(self.paper_sql,
                                     (paper['title'],
@@ -84,7 +94,7 @@ class ZujuanPipeline(object):
                     self.cursor.execute(self.paper_update_sql,(paper['exercise_num'],paper['url']))
                 paper_id = row[0]
 
-            print(">>>>>>>>>>>>>> new paper id: %s" % (paper_id))
+            print(">>>>>>>>>>>>>>>>>>>>>>>> new paper id: %s <<<<<<<<<<<<<<<<<<<<<<<<" % (paper_id))
             # 写入试题表
             self.cursor.execute(self.exercise_sql, (
                     item['subject'],
@@ -92,7 +102,7 @@ class ZujuanPipeline(object):
                     item['degree'],
                     item['source_id'],
                     paper_id,
-                    pymysql.escape_string(item['description']),
+                    item['description'],
                     # pymysql.escape_string(item['method']),
                     item['method'],
                     # pymysql.escape_string(item['answer']),
@@ -103,6 +113,7 @@ class ZujuanPipeline(object):
                     item['sort']
                 )
             )
+            print(">>>>>>>>>>>>>>>>>>>>>>>> store success <<<<<<<<<<<<<<<<<<<<<<<<")
         # elif spider.name == 'zxls':
         #     print('---存数据---')
         #     # 先判断试卷是否已经存在
@@ -142,14 +153,15 @@ class ZujuanPipeline(object):
 
     def open_spider(self, spider):
         # 连接数据库
-        self.connect = pymysql.connect(
-            host=self.settings.get('MYSQL_HOST'),
-            port=self.settings.get('MYSQL_PORT'),
-            db=self.settings.get('MYSQL_DBNAME'),
-            user=self.settings.get('MYSQL_USER'),
-            passwd=self.settings.get('MYSQL_PASSWD'),
-            charset='utf8',
-            use_unicode=True)
+        self.connect    = pymysql.connect(
+            host        = self.settings.get('MYSQL_HOST'),
+            port        = self.settings.get('MYSQL_PORT'),
+            db          = self.settings.get('MYSQL_DBNAME'),
+            user        = self.settings.get('MYSQL_USER'),
+            passwd      = self.settings.get('MYSQL_PASSWD'),
+            charset     = 'utf8',
+            use_unicode = True
+        )
 
         # 通过cursor执行增删查改
         self.cursor = self.connect.cursor()

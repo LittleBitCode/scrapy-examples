@@ -8,17 +8,22 @@
 #     https://doc.scrapy.org/en/latest/topics/settings.html
 #     https://doc.scrapy.org/en/latest/topics/downloader-middleware.html
 #     https://doc.scrapy.org/en/latest/topics/spider-middleware.html
+
 import sys
 import os
 from os.path import dirname
+
 path = dirname(dirname(os.path.abspath(os.path.dirname(__file__))))
 sys.path.append(path)
 
 from misc.log import *
 
-BOT_NAME = 'zujuan'
 
-SPIDER_MODULES = ['zujuan.spiders']
+
+
+BOT_NAME         = 'zujuan'
+
+SPIDER_MODULES   = ['zujuan.spiders']
 NEWSPIDER_MODULE = 'zujuan.spiders'
 
 
@@ -26,23 +31,12 @@ NEWSPIDER_MODULE = 'zujuan.spiders'
 #USER_AGENT = 'zujuan (+http://www.yourdomain.com)'
 
 # Obey robots.txt rules
-ROBOTSTXT_OBEY = False
-
-# Configure maximum concurrent requests performed by Scrapy (default: 16)
-#CONCURRENT_REQUESTS = 32
-
-# Configure a delay for requests for the same website (default: 0)
-# See https://doc.scrapy.org/en/latest/topics/settings.html#download-delay
-# See also autothrottle settings and docs
-#DOWNLOAD_DELAY = 3
-# The download delay setting will honor only one of:
-#CONCURRENT_REQUESTS_PER_DOMAIN = 16
-#CONCURRENT_REQUESTS_PER_IP = 16
+ROBOTSTXT_OBEY  = False
 
 # Disable cookies (enabled by default)
 # 自动传递cookies与打印cookies设置
 COOKIES_ENABLED = True
-COOKIES_DEBUG   = True
+# COOKIES_DEBUG   = True
 
 # Disable Telnet Console (enabled by default)
 #TELNETCONSOLE_ENABLED = False
@@ -79,23 +73,37 @@ DOWNLOADER_MIDDLEWARES = {
 
 # Configure item pipelines
 # See https://doc.scrapy.org/en/latest/topics/item-pipeline.html
+# 优先级 1-1000 越小优先级越高
 ITEM_PIPELINES = {
-   # 'zujuan.pipelines.ZujuanPipeline'        : 300,
-   'zujuan.pipelines.DownloadImagesPipeline' : 5,
+    'zujuan.pipelines.DownloadImagesPipeline': 1,
+    'zujuan.pipelines.ZujuanPipeline'        : 2,
 }
 
-# Enable and configure the AutoThrottle extension (disabled by default)
-# See https://doc.scrapy.org/en/latest/topics/autothrottle.html
-#AUTOTHROTTLE_ENABLED = True
-# The initial download delay
-#AUTOTHROTTLE_START_DELAY = 5
-# The maximum download delay to be set in case of high latencies
-#AUTOTHROTTLE_MAX_DELAY = 60
-# The average number of requests Scrapy should be sending in parallel to
-# each remote server
-#AUTOTHROTTLE_TARGET_CONCURRENCY = 1.0
-# Enable showing throttling stats for every response received:
-#AUTOTHROTTLE_DEBUG = False
+# Configure maximum concurrent requests performed by Scrapy (default: 16)
+#CONCURRENT_REQUESTS = 32
+
+# Configure a delay for requests for the same website (default: 0)
+# See https://doc.scrapy.org/en/latest/topics/settings.html#download-delay
+# See also autothrottle settings and docs
+#DOWNLOAD_DELAY = 3
+# The download delay setting will honor only one of:
+#CONCURRENT_REQUESTS_PER_DOMAIN = 16
+#CONCURRENT_REQUESTS_PER_IP = 16
+
+# 自动限速（AutoTrottle）下载图片时使用
+# 值得注意的是，启用AutoThrottle扩展时，仍然受到DOWNLOAD_DELAY（下载延迟）
+# 和CONCURRENT_REQUESTS_PER_DOMAIN（对单个网站进行并发请求的最大值）
+# 以及CONCURRENT_REQUESTS_PER_IP（对单个IP进行并发请求的最大值）的约束。
+# 启用AutoThrottle扩展
+AUTOTHROTTLE_ENABLED = True
+# 初始下载延迟(单位:秒)
+AUTOTHROTTLE_START_DELAY = 5
+# 在高延迟情况下最大的下载延迟(单位秒)
+AUTOTHROTTLE_MAX_DELAY = 60
+# 设置 Scrapy应该与远程网站并行发送的平均请求数, 目前是以1个并发请求数
+AUTOTHROTTLE_TARGET_CONCURRENCY = 1.0
+# 启用AutoThrottle调试模式
+AUTOTHROTTLE_DEBUG = False
 
 # Enable and configure HTTP caching (disabled by default)
 # See https://doc.scrapy.org/en/latest/topics/downloader-middleware.html#httpcache-middleware-settings

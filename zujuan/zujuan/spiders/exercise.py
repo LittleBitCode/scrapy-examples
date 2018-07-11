@@ -16,11 +16,10 @@ class ExerciseSpider(scrapy.Spider):
     name = 'zujuan'
     allowed_domains = ['zujuan.21cnjy.com/']
     start_urls = [
-        'https://zujuan.21cnjy.com/',
-        'https://zujuan.21cnjy.com/paper/view/',
-        'https://zujuan.21cnjy.com/paper/paper-category-list?xd=2&chid=2',
-        'https://zujuan.21cnjy.com/paper/paper-sync-list?xd=2&chid=2',
-        'https://zujuan.21cnjy.com/paper/paper-exam-list?xd=2&chid=2'
+        # 'https://zujuan.21cnjy.com/paper/paper-category-list?xd=2&chid=2', #初中语文同步试卷
+        # 'https://zujuan.21cnjy.com/paper/paper-sync-list?xd=2&chid=2',     #初中语文测试试卷
+        # 'https://zujuan.21cnjy.com/paper/paper-exam-list?xd=2&chid=2',     #初中语文真题试卷
+        'http://zujuan.21cnjy.com/paper/paper-exam-list?xd=3&chid=9'         #高中政治高考真题
     ]
     base_url = 'https://zujuan.21cnjy.com'
     xd = {

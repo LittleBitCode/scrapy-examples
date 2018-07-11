@@ -1,12 +1,9 @@
 # scrapy-examples
----
 ## Instruction
-1、用scrapy框架编写，抓取试卷及试题
-2、相关模块`BeautifulSoup4`、`Pillow`、`lxml`...
-3、图片下载，多管道处理
-
+>1、用scrapy框架编写，抓取试卷及试题
+>2、相关模块`BeautifulSoup4`、`Pillow`、`lxml`...
+>3、图片下载，多管道处理
 ## Usage
-
 >1、切换到工作目录
 
 ```

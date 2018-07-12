@@ -22,9 +22,10 @@ class ZxlsSpider(scrapy.Spider):
     name = 'zxls'
     allowed_domains = ['zujuan.zxls.com']
     start_urls = [
-        'http://zujuan.zxls.com/',
+        'http://zujuan.zxls.com/Web/ashx_/PaperSearch.ashx',
+        'http://zujuan.zxls.com/Web/ashx_/PaperSearch.ashx',
         'http://zujuan.zxls.com/PaperLatest.aspx',
-        'http://zujuan.zxls.com/PaperList.aspx?',
+        'http://zujuan.zxls.com/PaperList.aspx',
     ]
 
     site = '4'
@@ -50,7 +51,7 @@ class ZxlsSpider(scrapy.Spider):
     exercise_type = ''
 
     cookies = {
-        'ASP.NET_SessionId':'4v4kzhdkqda3vp5dhedkb014',
+        'ASP.NET_SessionId':'wzbsedn0d4kue32tufpv2h13',
         'kemu':'1'
     }
     # cookies = {}
@@ -98,7 +99,6 @@ class ZxlsSpider(scrapy.Spider):
             value = cookie.split('=')[1]
             cookie_dic[key] = value
         # self.cookies = cookie_dic
-        print(self.cookies)
         yield FormRequest(
                 self.base_url + '/Web/ashx_/PaperSearch.ashx',
                 headers=self.headers,
@@ -182,18 +182,19 @@ class ZxlsSpider(scrapy.Spider):
         for child in soup.find('div',id='subjectList').contents:
             if child.name == None:
                 continue
-            # if child.name == 'p':
-                # self.exercise_type = str(child.string).split('、')[-1]
             if child.name == 'div':
                 tds         = child.find_all('td')
                 description = str(tds[1])
-                # imgs = child.find_all('img')
-                # if len(imgs) > 0:
-                #     for img in imgs:
-                #         img_url = self.base_url+'/'+img['src']
-                #         print(img_url)
-
+                imgs = Selector(text=str(child)).xpath('//img/@src').extract()
+                description_imgs = {}
+                if len(imgs) > 0:
+                    for img in imgs:
+                        img_url = self.base_url+'/'+img
+                        description_imgs[img] = img_url
                 options     = child.find_all('td',attrs={'class':'sstd'})
+                if len(options) == 0:
+                    options = child.find_all('td', attrs={'class': 'ddtd'})
+
                 options_string = {}
                 if len(options) > 0:
                     exercise_type = '单选题'
@@ -206,50 +207,77 @@ class ZxlsSpider(scrapy.Spider):
                 source_id = child.find_all('input')[0]['value']
                 sort += 1
                 exercise = {
-                    'subject'      : subject,
-                    'degree'       : None,
-                    'source_id'    : source_id,
-                    'type'         : exercise_type,
-                    'description'  : description,
-                    'options'      : options,
-                    'answer'       : None,
-                    'method'       : None,
-                    'points'       : None,
-                    'url'          : None,
-                    'sort'         : sort,
-                    'paper'        : paper
+                    'subject'          : subject,
+                    'degree'           : None,
+                    'source_id'        : source_id,
+                    'type'             : exercise_type,
+                    'description'      : description,
+                    'options'          : options,
+                    'answer'           : None,
+                    'method'           : None,
+                    'points'           : None,
+                    'url'              : None,
+                    'sort'             : sort,
+                    'paper'            : paper,
+                    'description_imgs' : description_imgs
                 }
                 yield Request(
                         self.base_url+'/Web/ashx_/ProblemAttend.ashx?id=' + source_id,
                         cookies  = self.cookies,
                         meta     = {'exercise':exercise,"cookiejar":response.meta["cookiejar"]},
                         callback = self.parse_exercise_detail
-                    )
+                )
 
     def parse_exercise_detail(self,response):
         exercise   = response.meta['exercise']
         js         = json.loads(response.body)
         xml_string = html.fromstring(js['data'])
         points     = str(xml_string.xpath("//p[3]/text()")[0]).split('】')[-1].split('；')
-        points_dics= {}
-        for index,point in enumerate(points):
-            points_dics[index] = point
-        points     = json.dumps(points_dics)
-        method     = str(xml_string.xpath("//p[6]/text()")[0])
-        answer     = str(xml_string.xpath("//p[7]/text()")[0]).split('】')[-1]
+        points_list= []
+        for point in points:
+            points_list.append(point)
+        points     = json.dumps(points_list)
+
         degree     = str(xml_string.xpath("//p[last()-2]/text()")[0]).split('】')[-1]
+        if exercise['type'] == '单选题':
+            method = xml_string.xpath("//p[last()-4]/text()")
+            if len(method) > 0:
+                method = str(method[0])
+            else:
+                method = None
+
+            answer = xml_string.xpath("//p[last()-3]/text()")
+            if len(answer) > 0:
+                answer = str(answer[0]).split('】')[-1]
+            else:
+                answer = None
+        else:
+            method = xml_string.xpath("//p[last()-5]/text()")
+            if len(method) > 0:
+                method = str(method[0])
+            else:
+                method = None
+
+            answer = xml_string.xpath("//p[last()-3]/text()")
+            if len(answer) > 0:
+                answer = str(answer[0])
+            else:
+                answer = None
         yield {
-            'subject'       : exercise['subject'],
-            'degree'        : degree,
-            'source_id'     : exercise['source_id'],
-            'type'          : exercise['type'],
-            'description'   : exercise['description'],
-            'options'       : exercise['options'],
-            'answer'        : answer,
-            'method'        : method,
-            'points'        : points,
-            'url'           : 'url',
-            'sort'          : exercise['sort'],
-            'paper'         : exercise['paper']
+            'subject'          : exercise['subject'],
+            'degree'           : degree,
+            'source_id'        : exercise['source_id'],
+            'type'             : exercise['type'],
+            'description'      : exercise['description'],
+            'options'          : exercise['options'],
+            'answer'           : answer,
+            'answer_img'       : None,
+            'method'           : method,
+            'method_img'       : None,
+            'points'           : points,
+            'url'              : None,
+            'sort'             : exercise['sort'],
+            'paper'            : exercise['paper'],
+            'description_imgs' : exercise['description_imgs']
         }
 

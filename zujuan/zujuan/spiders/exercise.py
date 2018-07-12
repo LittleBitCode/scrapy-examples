@@ -191,27 +191,28 @@ class ExerciseSpider(scrapy.Spider):  #抓取单一页面，没有rules
             exercise_num += len(list['questions'])
             for question in list['questions']:
                 sort += 1
-                paper                   = response.meta['paper']
-                exercise                = ExerciseItem()
-                exercise['subject']     = paper['subject']
-                exercise['degree']      = self.degree[str(question['difficult_index'])]
-                exercise['source_id']   = question['question_id']
-                exercise['type']        = self.questionTypes[str(question['question_channel_type'])]
-                exercise['description'] = question['question_text']
-                exercise['options']     = json.dumps(question['options'])
-                exercise['answer']      = None
-                exercise['answer_img']  = question['answer']
-                exercise['method']      = None
-                exercise['method_img']  = question['explanation']
-                all_points              = question['t_knowledge']
-                points                  = []
+                paper                        = response.meta['paper']
+                exercise                     = ExerciseItem()
+                exercise['subject']          = paper['subject']
+                exercise['degree']           = self.degree[str(question['difficult_index'])]
+                exercise['source_id']        = question['question_id']
+                exercise['type']             = self.questionTypes[str(question['question_channel_type'])]
+                exercise['description']      = question['question_text']
+                exercise['options']          = json.dumps(question['options'])
+                exercise['answer']           = None
+                exercise['answer_img']       = question['answer']
+                exercise['method']           = None
+                exercise['method_img']       = question['explanation']
+                all_points                   = question['t_knowledge']
+                points                       = []
                 if len(all_points) > 0:
                     for point in all_points:
                         if point != None:
                             points.append(str(point['name']))
-                exercise['points']      = json.dumps(points)
-                exercise['url']         = self.base_url + '/question/detail/' + question['question_id']
-                exercise['sort']        = unicode(sort)
-                paper['exercise_num']   = exercise_num
-                exercise['paper']       = paper
+                exercise['points']           = json.dumps(points)
+                exercise['url']              = self.base_url + '/question/detail/' + question['question_id']
+                exercise['sort']             = unicode(sort)
+                paper['exercise_num']        = exercise_num
+                exercise['paper']            = paper
+                exercise['description_imgs'] = None
                 yield exercise

@@ -19,24 +19,42 @@ from zujuan.items import ImageItem,ExerciseItem
 import time
 from aip import AipOcr
 import zujuan.settings as set
+import random
 
 class DownloadImagesPipeline(ImagesPipeline):
 
     def get_media_requests(self, item, info):
-        image_urls = {
-            'answer': item['answer_img'],
-            'method': item['method_img']
-        }
-        for key in dict(image_urls).keys():
-            if image_urls[key] != None and str(image_urls[key]).startswith('http'):
-                print('-------------  开始下载图片%s -----------' % ( image_urls[key]))
-                yield Request(
-                    image_urls[key],
-                    meta={
-                        'item': item,
-                        'key' : key
-                    }
-                )  # 添加meta是为了下面重命名文件名使用
+        if item['answer_img'] != None and item['method_img'] != None and item['answer_img'] != '' and item['method_img'] != '':
+            image_urls = {
+                'answer': item['answer_img'],
+                'method': item['method_img']
+            }
+            for key in dict(image_urls).keys():
+                if image_urls[key] != None and str(image_urls[key]).startswith('http'):
+                    print('-------------  开始下载图片%s -----------' % ( image_urls[key]))
+                    yield Request(
+                        image_urls[key],
+                        meta={
+                            'item'  : item,
+                            'key'   : key,
+                            'index' :'1'
+                        }
+                    )  # 添加meta是为了下面重命名文件名使用
+        if item['description_imgs'] != None:
+            image_urls = dict(item['description_imgs'])
+            index = 0
+            for key in image_urls.keys():
+                if image_urls[key] != None and str(image_urls[key]).startswith('http'):
+                    index+=1
+                    print('-------------  开始下载描述图片%s -----------' % (image_urls[key]))
+                    yield Request(
+                        image_urls[key],
+                        meta={
+                            'item' : item,
+                            'key'  : 'description',
+                            'index': str(index)
+                        }
+                    )  # 添加meta是为了下面重命名文件名使用
 
     # 重写保存图片路径方法
     def file_path(self, request, response=None, info=None):
@@ -44,7 +62,7 @@ class DownloadImagesPipeline(ImagesPipeline):
         paper       = item['paper']
         firstFolder = request.meta['key']
         image_guid  = time.strftime("%Y-%m-%d", time.localtime(time.time()))
-        name        = item['source_id']
+        name        = item['source_id'] + '_' + request.meta['index']
         ext         = str(request.url.split('/')[-1].split('.')[-1]).split('?')[0]
         image_name  = name + '.' + ext
         filename    = u'{0}/{1}/{2}'.format(paper['site_id'],firstFolder, image_name)
@@ -60,16 +78,17 @@ class DownloadImagesPipeline(ImagesPipeline):
                 item['answer_img'] = image_path
             elif folder == 'method':
                 item['method_img'] = image_path
+            elif folder == 'description':
+                image_urls = item['description_imgs']
+                for key in dict(image_urls).keys():
+                    descrption = str(item['description'])
+                    new_descrption = descrption.replace(key,image_path)
+                    item['description'] = new_descrption
         print('------------ 图片下载完成 %s ------------' % image_paths)
         return item
 
 
 class ocrPipeline(object):
-
-    """ 你的 APPID AK SK """
-    APP_ID = '10733367'
-    API_KEY = 'WYAFwtoMQoapxd4poaDm7hB2'
-    SECRET_KEY = 'AGBBRZ8QKGrN1vaMeDosHlLWY7GaqzNA'
 
     client = AipOcr(set.BAIDUAPI['APP_ID'], set.BAIDUAPI['API_KEY'], set.BAIDUAPI['SECRET_KEY'])
 
@@ -95,7 +114,6 @@ class ocrPipeline(object):
             filePath = "%s/%s" % (rootPath, item['method_img'])
             item['method'] = self.ocrImage(filePath)
         return item
-
 
 
 class ZujuanPipeline(object):

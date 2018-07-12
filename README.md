@@ -18,5 +18,5 @@
 >2、运行spider
 
 ```
-    spider crawl `spiderName`
+    scrapy crawl `spiderName`
 ```

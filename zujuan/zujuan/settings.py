@@ -75,8 +75,9 @@ DOWNLOADER_MIDDLEWARES = {
 # See https://doc.scrapy.org/en/latest/topics/item-pipeline.html
 # 优先级 1-1000 越小优先级越高
 ITEM_PIPELINES = {
-    'zujuan.pipelines.DownloadImagesPipeline': 1,
-    'zujuan.pipelines.ZujuanPipeline'        : 2,
+    'zujuan.pipelines.DownloadImagesPipeline': 1, #本地保存图片
+    'zujuan.pipelines.ocrPipeline'           : 2, #图片文字识别
+    'zujuan.pipelines.ZujuanPipeline'        : 3, #保存试卷试题
 }
 
 # Configure maximum concurrent requests performed by Scrapy (default: 16)
@@ -142,3 +143,8 @@ IMAGES_STORE  = os.path.join(project_dir, '')
 #IMAGES_MIN_WIDTH  = 100
 # 是否允许重定向(可选)
 # MEDIA_ALLOW_REDIRECTS = True
+BAIDUAPI = {
+    'APP_ID'     : '10733367',
+    'API_KEY'    : 'WYAFwtoMQoapxd4poaDm7hB2',
+    'SECRET_KEY' : 'AGBBRZ8QKGrN1vaMeDosHlLWY7GaqzNA',
+}

@@ -17,13 +17,15 @@ import requests
 import os
 from zujuan.items import ImageItem,ExerciseItem
 import time
+from aip import AipOcr
+import zujuan.settings as set
 
 class DownloadImagesPipeline(ImagesPipeline):
 
     def get_media_requests(self, item, info):
         image_urls = {
-            'answer': item['answer'],
-            'method': item['method']
+            'answer': item['answer_img'],
+            'method': item['method_img']
         }
         for key in dict(image_urls).keys():
             if image_urls[key] != None and str(image_urls[key]).startswith('http'):
@@ -55,23 +57,53 @@ class DownloadImagesPipeline(ImagesPipeline):
         for image_path in image_paths:
             folder = str(image_path).split('/')[1]
             if folder == 'answer':
-                item['answer'] = image_path
+                item['answer_img'] = image_path
             elif folder == 'method':
-                item['method'] = image_path
+                item['method_img'] = image_path
         print('------------ 图片下载完成 %s ------------' % image_paths)
         return item
 
 
 class ocrPipeline(object):
 
-    pass
+    """ 你的 APPID AK SK """
+    APP_ID = '10733367'
+    API_KEY = 'WYAFwtoMQoapxd4poaDm7hB2'
+    SECRET_KEY = 'AGBBRZ8QKGrN1vaMeDosHlLWY7GaqzNA'
+
+    client = AipOcr(set.BAIDUAPI['APP_ID'], set.BAIDUAPI['API_KEY'], set.BAIDUAPI['SECRET_KEY'])
+
+    def get_file_content(self,filePath):
+        with open(filePath,'rb') as fp:
+            return fp.read()
+
+    def ocrImage(self,path):
+        image = self.get_file_content(path)
+        result = self.client.basicAccurate(image)
+        result_words = ''
+        if int(result['words_result_num']) > 0:
+            for words in result['words_result']:
+                result_words += words['words']
+        return result_words
+
+    def process_item(self, item, spider):
+        rootPath = str(set.project_dir)
+        if item['answer_img'] != None and item['answer_img'] != '':
+            filePath = "%s/%s" % (rootPath,item['answer_img'])
+            item['answer'] = self.ocrImage(filePath)
+        if item['method_img'] != None and item['method_img'] != '':
+            filePath = "%s/%s" % (rootPath, item['method_img'])
+            item['method'] = self.ocrImage(filePath)
+        return item
+
+
 
 class ZujuanPipeline(object):
     paper_sql = """
                    insert into papers(`title`,`site_id`,`year`,`level`,`subject`,`grade`,`type`,`exercise_num`,`views`,`uploaded_at`,`url`)values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                 """
     exercise_sql = """
-                      insert into exercises(`subject`,`type`,`degree`,`source_id`,`paper_id`,`description`,`method_img`,`answer_img`,`options`,`points`,`url`,`sort`)values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                      insert into exercises(`subject`,`type`,`degree`,`source_id`,`paper_id`,`description`,`method`,`method_img`,`answer`,`answer_img`,`options`,`points`,`url`,`sort`)values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                    """
     paper_update_sql = """
                           update papers set `exercise_num` = %s where `url` = %s
@@ -118,10 +150,10 @@ class ZujuanPipeline(object):
                     item['source_id'],
                     paper_id,
                     item['description'],
-                    # pymysql.escape_string(item['method']),
                     item['method'],
-                    # pymysql.escape_string(item['answer']),
+                    item['method_img'],
                     item['answer'],
+                    item['answer_img'],
                     item['options'],
                     item['points'],
                     item['url'],

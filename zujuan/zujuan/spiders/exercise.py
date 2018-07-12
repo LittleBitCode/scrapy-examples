@@ -18,17 +18,12 @@ class ExerciseSpider(scrapy.Spider):  #抓取单一页面，没有rules
     name = 'zujuan'
     allowed_domains = ['zujuan.21cnjy.com/']
     start_urls = [
-        # 'https://zujuan.21cnjy.com/paper/paper-category-list?xd=2&chid=2', #初中语文同步试卷
-        # 'https://zujuan.21cnjy.com/paper/paper-sync-list?xd=2&chid=2',     #初中语文测试试卷
-        # 'https://zujuan.21cnjy.com/paper/paper-exam-list?xd=2&chid=2',     #初中语文真题试卷
+        # 'https://zujuan.21cnjy.com/paper/paper-category-list?xd=2&chid=2',   #初中语文同步试卷
+        # 'https://zujuan.21cnjy.com/paper/paper-sync-list?xd=2&chid=2',       #初中语文测试试卷
+        # 'https://zujuan.21cnjy.com/paper/paper-exam-list?xd=2&chid=2',       #初中语文真题试卷
         'http://zujuan.21cnjy.com/paper/paper-exam-list?xd=3&chid=9'         #高中政治高考真题
     ]
-    #学科网 1
-    #组卷网 2
-    #橡皮网 3
-    #中学历史教学网 4
-    #2cnjy   5
-    #菁优网 6
+    #学科网:1  组卷网:2   橡皮网:3   中学历史教学网:4   2cnjy:5   菁优网:6
     site = '2'
     base_url = 'https://zujuan.21cnjy.com'
     xd = {
@@ -203,19 +198,13 @@ class ExerciseSpider(scrapy.Spider):  #抓取单一页面，没有rules
                 exercise['source_id']   = question['question_id']
                 exercise['type']        = self.questionTypes[str(question['question_channel_type'])]
                 exercise['description'] = question['question_text']
-                # dic = dict(question['options'])
-                # array = sorted(dic.items(),key=lambda d:d[0])
-                # options = {}
-                # for index,tup in enumerate(array):
-                #     string = chr(ord(str(int(index))) + 17)
-                #     options[string] = tup[-1]
-                # print(options)
-                # return
                 exercise['options']     = json.dumps(question['options'])
-                exercise['answer']      = question['answer']
-                exercise['method']      = question['explanation']
-                all_points = question['t_knowledge']
-                points = []
+                exercise['answer']      = None
+                exercise['answer_img']  = question['answer']
+                exercise['method']      = None
+                exercise['method_img']  = question['explanation']
+                all_points              = question['t_knowledge']
+                points                  = []
                 if len(all_points) > 0:
                     for point in all_points:
                         if point != None:

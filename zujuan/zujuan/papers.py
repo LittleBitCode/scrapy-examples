@@ -1,6 +1,7 @@
 import scrapy
 
 class Paper(scrapy.Item):
+    site_id      = scrapy.Field()
     title        = scrapy.Field()
     grade        = scrapy.Field()
     subject      = scrapy.Field()

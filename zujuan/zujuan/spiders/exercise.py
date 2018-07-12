@@ -11,6 +11,8 @@ from zujuan.papers import Paper
 from zujuan.items import ExerciseItem
 import time
 import urlparse
+import operator
+
 #CrawlSpider用来遍布抓取，通过rules来查找所有符合的URL来爬去信息
 class ExerciseSpider(scrapy.Spider):  #抓取单一页面，没有rules
     name = 'zujuan'
@@ -21,6 +23,13 @@ class ExerciseSpider(scrapy.Spider):  #抓取单一页面，没有rules
         # 'https://zujuan.21cnjy.com/paper/paper-exam-list?xd=2&chid=2',     #初中语文真题试卷
         'http://zujuan.21cnjy.com/paper/paper-exam-list?xd=3&chid=9'         #高中政治高考真题
     ]
+    #学科网 1
+    #组卷网 2
+    #橡皮网 3
+    #中学历史教学网 4
+    #2cnjy   5
+    #菁优网 6
+    site = '2'
     base_url = 'https://zujuan.21cnjy.com'
     xd = {
         '1' : "小学",
@@ -149,6 +158,7 @@ class ExerciseSpider(scrapy.Spider):  #抓取单一页面，没有rules
         lists  = js["list"]
         for list in lists:
             item                 = Paper()
+            item['site_id']      = self.site
             item['title']        = list['title']
             item['grade']        = self.xd[params['xd'][0]]
             item['subject']      = self.chid[str(list['chid'])]
@@ -193,10 +203,24 @@ class ExerciseSpider(scrapy.Spider):  #抓取单一页面，没有rules
                 exercise['source_id']   = question['question_id']
                 exercise['type']        = self.questionTypes[str(question['question_channel_type'])]
                 exercise['description'] = question['question_text']
+                # dic = dict(question['options'])
+                # array = sorted(dic.items(),key=lambda d:d[0])
+                # options = {}
+                # for index,tup in enumerate(array):
+                #     string = chr(ord(str(int(index))) + 17)
+                #     options[string] = tup[-1]
+                # print(options)
+                # return
                 exercise['options']     = json.dumps(question['options'])
                 exercise['answer']      = question['answer']
                 exercise['method']      = question['explanation']
-                exercise['points']      = json.dumps(question['t_knowledge'])
+                all_points = question['t_knowledge']
+                points = []
+                if len(all_points) > 0:
+                    for point in all_points:
+                        if point != None:
+                            points.append(str(point['name']))
+                exercise['points']      = json.dumps(points)
                 exercise['url']         = self.base_url + '/question/detail/' + question['question_id']
                 exercise['sort']        = unicode(sort)
                 paper['exercise_num']   = exercise_num

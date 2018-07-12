@@ -26,6 +26,9 @@ class ZxlsSpider(scrapy.Spider):
         'http://zujuan.zxls.com/PaperLatest.aspx',
         'http://zujuan.zxls.com/PaperList.aspx?',
     ]
+
+    site = '4'
+
     base_url = 'http://zujuan.zxls.com'
 
     headers = {
@@ -162,6 +165,7 @@ class ZxlsSpider(scrapy.Spider):
         views        = response.xpath("//div[@class='xiaobiaoti']/span[6]/text()").extract_first().replace(u'浏览数：'  , '')
         uploaded_at  = response.meta['year']
         paper = {
+            'site_id'       : self.site,
             'url'           : url,
             'title'         : title,
             'subject'       : subject,

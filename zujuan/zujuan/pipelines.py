@@ -39,12 +39,13 @@ class DownloadImagesPipeline(ImagesPipeline):
     # 重写保存图片路径方法
     def file_path(self, request, response=None, info=None):
         item        = request.meta['item']
+        paper       = item['paper']
         firstFolder = request.meta['key']
         image_guid  = time.strftime("%Y-%m-%d", time.localtime(time.time()))
         name        = item['source_id']
         ext         = str(request.url.split('/')[-1].split('.')[-1]).split('?')[0]
         image_name  = name + '.' + ext
-        filename    = u'full/{0}/{1}'.format(firstFolder, image_name)
+        filename    = u'{0}/{1}/{2}'.format(paper['site_id'],firstFolder, image_name)
         return filename
 
     def item_completed(self, results, item, info):
@@ -60,6 +61,10 @@ class DownloadImagesPipeline(ImagesPipeline):
         print('------------ 图片下载完成 %s ------------' % image_paths)
         return item
 
+
+class ocrPipeline(object):
+
+    pass
 
 class ZujuanPipeline(object):
     paper_sql = """
@@ -78,7 +83,6 @@ class ZujuanPipeline(object):
     def process_item(self, item, spider):
         if spider.name == 'zujuan' or spider.name == 'zxls':
             # 先判断试卷是否已经存在
-            site_id = 202
             paper = item['paper']
             self.cursor.execute("select id from papers where url='%s'" % (paper['url']))
             row = self.cursor.fetchone()
@@ -88,7 +92,7 @@ class ZujuanPipeline(object):
             if self.cursor.rowcount == 0:
                 self.cursor.execute(self.paper_sql,
                                     (paper['title'],
-                                     site_id,
+                                     paper['site_id'],
                                      paper['year'],
                                      paper['level'],
                                      paper['subject'],

@@ -95,15 +95,15 @@ ITEM_PIPELINES = {
 # 和CONCURRENT_REQUESTS_PER_DOMAIN（对单个网站进行并发请求的最大值）
 # 以及CONCURRENT_REQUESTS_PER_IP（对单个IP进行并发请求的最大值）的约束。
 # 启用AutoThrottle扩展
-AUTOTHROTTLE_ENABLED = True
+# AUTOTHROTTLE_ENABLED = True
 # 初始下载延迟(单位:秒)
-AUTOTHROTTLE_START_DELAY = 5
+# AUTOTHROTTLE_START_DELAY = 5
 # 在高延迟情况下最大的下载延迟(单位秒)
-AUTOTHROTTLE_MAX_DELAY = 60
+# AUTOTHROTTLE_MAX_DELAY = 60
 # 设置 Scrapy应该与远程网站并行发送的平均请求数, 目前是以1个并发请求数
-AUTOTHROTTLE_TARGET_CONCURRENCY = 1.0
+# AUTOTHROTTLE_TARGET_CONCURRENCY = 1.0
 # 启用AutoThrottle调试模式
-AUTOTHROTTLE_DEBUG = False
+# AUTOTHROTTLE_DEBUG = False
 
 # Enable and configure HTTP caching (disabled by default)
 # See https://doc.scrapy.org/en/latest/topics/downloader-middleware.html#httpcache-middleware-settings
@@ -123,8 +123,9 @@ MYSQL_DBNAME  = "spider"
 # SPLASH_URL='http://127.0.0.1:8050'
 # DUPEFILTER_CLASS = 'scrapy_splash.SplashAwareDupeFilter'
 #工程根目录
+#/Users/macbookpro/Desktop/MyProject/Examples/zujuan/zujuan
 project_dir   = os.path.dirname(__file__)
-IMAGES_STORE  = os.path.join(project_dir, 'resources')
+IMAGES_STORE  = os.path.join(project_dir, '')
 # 该字段的值为ImageItem中定义的存储图片链接的image_urls字段
 #IMAGES_URLS_FIELD='image_urls'
 # 该字段的值为ImageItem中定义的存储图片信息的images字段

@@ -2,7 +2,10 @@
 from proxy import PROXIES, FREE_PROXIES
 from agents import AGENTS
 import logging as log
-
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from scrapy.http import HtmlResponse
+import time
 import random
 
 
@@ -31,7 +34,6 @@ class CustomHttpProxyFromMysqlMiddleware(object):
         #i = random.randint(1, 10)
         #return i <= 2
         return True
-
 
 
 class CustomHttpProxyMiddleware(object):
@@ -76,3 +78,40 @@ class DownloadImageMiddleware(object):
         referer = request.meta.get('referer', None)
         if referer:
             request.headers['referer'] = referer
+
+
+js = """
+function scrollToBottom() {
+
+    var Height = document.body.clientHeight,  //文本高度
+        screenHeight = window.innerHeight,  //屏幕高度
+        INTERVAL = 100,  // 滚动动作之间的间隔时间
+        delta = 500,  //每次滚动距离
+        curScrollTop = 0;    //当前window.scrollTop 值
+
+    var scroll = function () {
+        curScrollTop = document.body.scrollTop;
+        window.scrollTo(0,curScrollTop + delta);
+    };
+
+    var timer = setInterval(function () {
+        var curHeight = curScrollTop + screenHeight;
+        if (curHeight >= Height){   //滚动到页面底部时，结束滚动
+            clearInterval(timer);
+        }
+        scroll();
+    }, INTERVAL)
+}
+scrollToBottom()
+"""
+class PhantomJSMiddleware(object):
+    pass
+    # def process_request(self, request, spider):
+        # if spider.name == 'phantomjs' :#and request.meta.has_key('PhantomJS')
+        #     print('-------------------')
+        #     chrome_options = Options()
+        #     chrome_options.add_argument('--headless')
+        #     chrome_options.add_argument('--disable-gpu')
+        #     driver  = webdriver.Chrome()
+        #     content = driver.get(request.url)
+        #     return HtmlResponse(request.url,encoding='utf-8',body=content,request=request)

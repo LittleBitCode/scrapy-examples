@@ -51,7 +51,7 @@ class ZxlsSpider(scrapy.Spider):
     exercise_type = ''
 
     cookies = {
-        'ASP.NET_SessionId':'wzbsedn0d4kue32tufpv2h13',
+        'ASP.NET_SessionId':'rtj5qun2jjcuyszcwfdfrrcx',
         'kemu':'1'
     }
     # cookies = {}
@@ -107,9 +107,12 @@ class ZxlsSpider(scrapy.Spider):
                 formdata = {
                             'cid' : '1',
                             'gr'  : '高三级',
-                            'cty' : '高考真题',
+                            # 'cty' : '高考真题',
+                            # 'cty' : '期末考试',
                             'page': '1',
-                            'rows': '10'
+                            'rows': '10',
+                            # 'pyear':'2014',
+                            # 'pn':'山东省潍坊市2014届高三第一学期期末考试'
                            },
                 callback = self.parse_paper_list,
                 dont_filter=True
@@ -146,9 +149,12 @@ class ZxlsSpider(scrapy.Spider):
                 formdata = {
                     'cid' : '1',
                     'gr'  : '高三级',
-                    'cty' : '高考真题',
+                    # 'cty' : '高考真题',
+                    # 'cty': '期末考试',
                     'page': str(next_page),
-                    'rows': '10'
+                    'rows': '10',
+                    # 'pyear': '2014',
+                    # 'pn': '山东省潍坊市2014届高三第一学期期末考试'
                 },
                 callback = self.parse_paper_list,
                 dont_filter=True

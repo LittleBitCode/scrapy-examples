@@ -57,6 +57,7 @@ COOKIES_ENABLED = True
 # Enable or disable downloader middlewares
 # See https://doc.scrapy.org/en/latest/topics/downloader-middleware.html
 DOWNLOADER_MIDDLEWARES = {
+    'misc.middleware.PhantomJSMiddleware' : 1,
     # 'misc.middleware.CustomHttpProxyFromMysqlMiddleware' : 400,
     # 'misc.middleware.CustomUserAgentMiddleware'          : 401,
 #     'misc.middleware.DownloadImageMiddleware'            : 543,
@@ -121,6 +122,13 @@ MYSQL_PORT    = 3306
 MYSQL_CHARSET = "utf8"
 MYSQL_DBNAME  = "spider"
 
+# MYSQL_HOST = "192.168.151.230"
+# MYSQL_USER = "crawl"
+# MYSQL_PASSWD = "E^h0O%5QcLWWacWUzGd46HIXg"
+# MYSQL_PORT = 3306
+# MYSQL_CHARSET = "utf8"
+# MYSQL_DBNAME = "spider"
+
 # SPLASH_URL='http://127.0.0.1:8050'
 # DUPEFILTER_CLASS = 'scrapy_splash.SplashAwareDupeFilter'
 #工程根目录
@@ -143,8 +151,13 @@ IMAGES_STORE  = os.path.join(project_dir, '')
 #IMAGES_MIN_WIDTH  = 100
 # 是否允许重定向(可选)
 # MEDIA_ALLOW_REDIRECTS = True
-BAIDUAPI = {
-    'APP_ID'     : '10733367',
-    'API_KEY'    : 'WYAFwtoMQoapxd4poaDm7hB2',
-    'SECRET_KEY' : 'AGBBRZ8QKGrN1vaMeDosHlLWY7GaqzNA',
-}
+# BAIDUAPI = {
+#     'APP_ID'     : '10733367',
+#     'API_KEY'    : 'WYAFwtoMQoapxd4poaDm7hB2',
+#     'SECRET_KEY' : 'AGBBRZ8QKGrN1vaMeDosHlLWY7GaqzNA',
+# }
+# BAIDUAPI = {
+#     'APP_ID'     : '11532440',
+#     'API_KEY'    : 'hhW4gM2CAZdsUqjUyIA1WxZF',
+#     'SECRET_KEY' : 'Thh51ejbCG4u1eV1CUWa6WYW7blsrsX5',
+# }

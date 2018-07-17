@@ -59,6 +59,11 @@ class DownloadImagesPipeline(ImagesPipeline):
                         }
                     )  # 添加meta是为了下面重命名文件名使用
 
+    first_folder = {
+        '2' : 'zujuan_21cnjy',
+        '4' : 'zxls'
+    }
+
     # 重写保存图片路径方法
     def file_path(self, request, response=None, info=None):
         item        = request.meta['item']
@@ -68,31 +73,34 @@ class DownloadImagesPipeline(ImagesPipeline):
         name        = item['source_id'] + '_' + request.meta['index']
         ext         = str(request.url.split('/')[-1].split('.')[-1]).split('?')[0]
         image_name  = name + '.' + ext
-        filename    = u'{0}/{1}/{2}'.format(paper['site_id'],firstFolder, image_name)
+        # filename    = u'{0}/{1}/{2}'.format(paper['site_id'],firstFolder, image_name)
+        key         = str(paper['site_id'])
+        filename    = u'{0}/{1}/{2}'.format(self.first_folder[key],firstFolder, image_name)
         return filename
 
     def item_completed(self, results, item, info):
         image_paths = [x['path'] for ok, x in results if ok]  # ok判断是否下载成功
-        # if not image_paths:
-        #     raise DropItem("Item contains no images")
-        for image_path in image_paths:
-            folder = str(image_path).split('/')[1]
-            if folder == 'answer':
-                item['answer_img'] = image_path
-            elif folder == 'method':
-                item['method_img'] = image_path
-            elif folder == 'description':
-                image_urls = item['description_imgs']
-                if len(dict(image_urls).keys()) > 0:
-                    image_list = list(dict(image_urls).keys())
-                    for index,key in enumerate(image_list):
-                        image_path_index = str(image_path).split('_')[-1].split('.')[0]
-                        if int(image_path_index) == int(index)+1:
-                            descrption = str(item['description'])
-                            new_descrption = descrption.replace(key,image_path)
-                            item['description'] = new_descrption
-        print('------------ 图片下载完成 %s ------------' % image_paths)
-        return item
+        if not image_paths:
+            return item
+        else:
+            for image_path in image_paths:
+                folder = str(image_path).split('/')[1]
+                if folder == 'answer':
+                    item['answer_img'] = image_path
+                elif folder == 'method':
+                    item['method_img'] = image_path
+                elif folder == 'description':
+                    image_urls = item['description_imgs']
+                    if len(dict(image_urls).keys()) > 0:
+                        image_list = list(dict(image_urls).keys())
+                        for index,key in enumerate(image_list):
+                            image_path_index = str(image_path).split('_')[-1].split('.')[0]
+                            if int(image_path_index) == int(index)+1:
+                                descrption = str(item['description'])
+                                new_descrption = descrption.replace(key,image_path)
+                                item['description'] = new_descrption
+            print('------------ 图片下载完成 %s ------------' % image_paths)
+            return item
 
 
 class ocrPipeline(object):
@@ -101,16 +109,16 @@ class ocrPipeline(object):
         index = 0
 
     account = [
-        {
-            'APP_ID': '11501062',
-            'API_KEY': 'Ld7fqNs8GsXoxVIpuYHALEw0',
-            'SECRET_KEY': 'mrMI4s7Bce0focebXGOzGq3lah80e9bM',
-        },
-        {
-            'APP_ID': '11497928',
-            'API_KEY': 'koU2CIiT3ux3QCIiP8YiYPGT',
-            'SECRET_KEY': 'KmhsSPSrXuwuQUjboqpct0HLqPebS0eD',
-        },
+        # {
+        #     'APP_ID': '11501062',
+        #     'API_KEY': 'Ld7fqNs8GsXoxVIpuYHALEw0',
+        #     'SECRET_KEY': 'mrMI4s7Bce0focebXGOzGq3lah80e9bM',
+        # },
+        # {
+        #     'APP_ID': '11497928',
+        #     'API_KEY': 'koU2CIiT3ux3QCIiP8YiYPGT',
+        #     'SECRET_KEY': 'KmhsSPSrXuwuQUjboqpct0HLqPebS0eD',
+        # },
         # {
         #     'APP_ID': '11501079',
         #     'API_KEY': 'GRoaofnAbOMN1oVDC52cQz0m',
@@ -326,17 +334,48 @@ class ocrPipeline(object):
         #     'API_KEY': 'QmBc3mArK9cf267zGPrAxVNG',
         #     'SECRET_KEY': 'Hn9IkTVAD1DHQHf9Ew2VNatVrGMWXgEe',
         # },
-        # {
-        #     'APP_ID': '11532440',
-        #     'API_KEY': 'hhW4gM2CAZdsUqjUyIA1WxZF',
-        #     'SECRET_KEY': 'Thh51ejbCG4u1eV1CUWa6WYW7blsrsX5',
-        # },
-        # {
-        #     'APP_ID': '10733367',
-        #     'API_KEY': 'WYAFwtoMQoapxd4poaDm7hB2',
-        #     'SECRET_KEY': 'AGBBRZ8QKGrN1vaMeDosHlLWY7GaqzNA',
-        # },
+        {
+            'APP_ID': '11532440',
+            'API_KEY': 'hhW4gM2CAZdsUqjUyIA1WxZF',
+            'SECRET_KEY': 'Thh51ejbCG4u1eV1CUWa6WYW7blsrsX5',
+        },
+        {
+            'APP_ID': '10733367',
+            'API_KEY': 'WYAFwtoMQoapxd4poaDm7hB2',
+            'SECRET_KEY': 'AGBBRZ8QKGrN1vaMeDosHlLWY7GaqzNA',
+        },
+        {
+            'APP_ID': '10710943',
+            'API_KEY': '2EDYpfWbnSsSBhGHBCA1DK1k',
+            'SECRET_KEY': 'rdMt7adACFmRQWKzF8lGCCRT8h2NDqQx',
+        },
+        {
+            'APP_ID': '10784818',
+            'API_KEY': 'G7T90DoNG1AGj8eUOdkLHIuR',
+            'SECRET_KEY': 'iHUyLs70PqKCGGnpG6PG8U7iUvPpD1n0',
+        },
+        {
+            'APP_ID': '10788064',
+            'API_KEY': 'XTjqKzNRUzrIZvWkOGN31gPu',
+            'SECRET_KEY': 'dQZj5bywzHcm1QtSEBMUqp85VXDp0CQc',
+        },
+        {
+            'APP_ID': '10797268',
+            'API_KEY': 'tku0zN0nyo4rV1GlFDYBqgBI',
+            'SECRET_KEY': 'TGPmVlGgCKfig6o4HIxV3Q79C8kquzpz',
+        },
+        {
+            'APP_ID': '10797257',
+            'API_KEY': 'I4v4mUbkV5pwSgfUIqZ9DUBz',
+            'SECRET_KEY': 'TahfDuzFo26n7Q7pMk1fhdVh3fGQteat',
+        },
+        {
+            'APP_ID': '10733367',
+            'API_KEY': 'WYAFwtoMQoapxd4poaDm7hB2',
+            'SECRET_KEY': 'AGBBRZ8QKGrN1vaMeDosHlLWY7Gaqz',
+        },
     ]
+    # current_account = account[1]
     current_account = account[index]
 
     def get_file_content(self,filePath):
@@ -348,26 +387,28 @@ class ocrPipeline(object):
 
     def ocrImage(self,path,account):
         client = AipOcr(account['APP_ID'], account['API_KEY'], account['SECRET_KEY'])
-        # client = AipOcr('11542292', '8N04RQQS7M7A5VjBpXiY3VSo', '7QPFhN8VqBTZVuSF01VqDzMa3OQXzPnn')
         result_words = ''
-        if str(path).startswith('http'):
-            return result_words
-        image = self.get_file_content(path)
-        result = client.basicAccurate(image)
-        result = dict(result)
-        if result.has_key('error_msg'):
-            try:
-                self.changeBaiduAccount(path=path)
-            except Exception as e:
-                print('555555555555555')
-                # print(result['error_msg'])
-                print(e.message)
-                print('555555555555555')
-                return result_words
+        if str(path).find('http') >= 0:
+            result_words = ''
         else:
-            if int(result['words_result_num']) > 0:
-                for words in result['words_result']:
-                    result_words += words['words']
+            image = self.get_file_content(path)
+            result = client.basicAccurate(image)
+            result = dict(result)
+            if result.has_key('error_msg'):
+                result_words = ''
+                return result_words
+                # try:
+                #     self.changeBaiduAccount(path=path)
+                # except Exception as e:
+                #     print('555555555555555')
+                #     # print(result['error_msg'])
+                #     print(e.message)
+                #     print('555555555555555')
+                #     return result_words
+            else:
+                if int(result['words_result_num']) > 0:
+                    for words in result['words_result']:
+                        result_words += words['words']
         return result_words
 
     def changeBaiduAccount(self,path):
@@ -377,7 +418,7 @@ class ocrPipeline(object):
         if account_index +1 >= length:
             local_redis.set('account_index', 0)
             cycle_num = int(local_redis['cycle_num'])
-            if cycle_num < 3:
+            if cycle_num < 2:
                 local_redis.set('cycle_num',cycle_num + 1)
             else:
                 local_redis.set('cycle_num',0)
@@ -457,17 +498,20 @@ class ZujuanPipeline(object):
                    insert into papers(`title`,`site_id`,`year`,`level`,`subject`,`grade`,`type`,`exercise_num`,`views`,`uploaded_at`,`url`)values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                 """
     exercise_sql = """
-                      insert into exercises(`subject`,`type`,`degree`,`source_id`,`paper_id`,`description`,`method`,`method_img`,`answer`,`answer_img`,`options`,`points`,`url`,`sort`)values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                      insert into exercises(`subject`,`grade`,`type`,`degree`,`source_id`,`paper_id`,`description`,`method`,`method_img`,`answer`,`answer_img`,`options`,`points`,`url`,`sort`)values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                    """
     paper_update_sql = """
                           update papers set `exercise_num` = %s where `url` = %s
                        """
     exercise_update_method_sql = """
-                                    update exercises set `method` = %s where `source_id` = %s
+                                    update exercises set `method` = %s where `url` = %s
                                  """
     exercise_update_answer_sql = """
-                                    update exercises set `answer` = %s where `source_id` = %s
+                                    update exercises set `answer` = %s where `url` = %s
                                  """
+    exercise_update_options_sql = """
+                                        update exercises set `options` = %s where `url` = %s
+                                     """
     def __init__(self, settings):
         self.settings = settings
 
@@ -511,18 +555,23 @@ class ZujuanPipeline(object):
                     if item['method'] != None:
                         self.cursor.execute(self.exercise_update_method_sql,(
                                 item['method'],
-                                item['source_id']
+                                item['url']
                         ))
                 if result[13] != None:
                     if item['answer'] != None:
                         self.cursor.execute(self.exercise_update_answer_sql, (
                             item['answer'],
-                            item['source_id']
+                            item['url']
                         ))
+                self.cursor.execute(self.exercise_update_options_sql,(
+                        item['options'],
+                        item['url']
+                ))
             else:
                 # 写入试题表
                 self.cursor.execute(self.exercise_sql, (
                         item['subject'],
+                        item['grade'],
                         item['type'],
                         item['degree'],
                         item['source_id'],

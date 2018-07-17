@@ -115,6 +115,7 @@ ITEM_PIPELINES = {
 #HTTPCACHE_IGNORE_HTTP_CODES = []
 #HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
 
+# 本地测试数据库
 MYSQL_HOST    = "127.0.0.1"
 MYSQL_USER    = "root"
 MYSQL_PASSWD  = "123456"
@@ -122,6 +123,7 @@ MYSQL_PORT    = 3306
 MYSQL_CHARSET = "utf8"
 MYSQL_DBNAME  = "spider"
 
+# 威科姆中转数据库
 # MYSQL_HOST = "192.168.151.230"
 # MYSQL_USER = "crawl"
 # MYSQL_PASSWD = "E^h0O%5QcLWWacWUzGd46HIXg"

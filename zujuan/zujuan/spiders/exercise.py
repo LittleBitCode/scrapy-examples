@@ -171,15 +171,15 @@ class ExerciseSpider(scrapy.Spider):  #抓取单一页面，没有rules
                 dont_filter = True
             )
 
-        # if js["pager"]:
-        #     xml_string = html.fromstring(js["pager"])
-        #     next_link  = xml_string.xpath("//div[@class='pagenum']/a[last()]/@href")[0]
-        #     if next_link:
-        #         yield Request(
-        #             url         = self.base_url + next_link,
-        #             callback    = self.parse,
-        #             dont_filter = True
-        #         )
+        if js["pager"]:
+            xml_string = html.fromstring(js["pager"])
+            next_link  = xml_string.xpath("//div[@class='pagenum']/a[last()]/@href")[0]
+            if next_link:
+                yield Request(
+                    url         = self.base_url + next_link,
+                    callback    = self.parse,
+                    dont_filter = True
+                )
 
     # 分析试题列表
     def parse_exercise_list(self, response):
@@ -194,11 +194,25 @@ class ExerciseSpider(scrapy.Spider):  #抓取单一页面，没有rules
                 paper                        = response.meta['paper']
                 exercise                     = ExerciseItem()
                 exercise['subject']          = paper['subject']
+                exercise['grade']            = paper['grade']
                 exercise['degree']           = self.degree[str(question['difficult_index'])]
                 exercise['source_id']        = question['question_id']
                 exercise['type']             = self.questionTypes[str(question['question_channel_type'])]
                 exercise['description']      = question['question_text']
-                exercise['options']          = json.dumps(question['options'])
+                options = question['options']
+                if options != None or options == '':
+                    if type(question['options']) == type({}):
+                        the_options = []
+                        allkeys = dict(question['options']).keys()
+                        allkeys = sorted(allkeys)
+                        if len(allkeys) > 0:
+                            for key in allkeys:
+                                the_options.append(options[key])
+                            exercise['options'] = json.dumps(the_options)
+                    else:
+                        exercise['options']  = None
+                else:
+                    exercise['options']      = None
                 exercise['answer']           = None
                 exercise['answer_img']       = question['answer']
                 exercise['method']           = None

@@ -14,6 +14,7 @@ class ExerciseItem(Item):
     degree           = Field()
     source_id        = Field()
     paper_id         = Field()
+    site_id          = Field()
     description      = Field()
     options          = Field()
     answer           = Field()
@@ -24,6 +25,7 @@ class ExerciseItem(Item):
     url              = Field()
     sort             = Field()
     paper            = Field()
+    is_wrong         = Field()
     description_imgs = Field()
 
 class ImageItem(Item):

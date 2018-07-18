@@ -18,13 +18,15 @@ class ExerciseSpider(scrapy.Spider):  #抓取单一页面，没有rules
     name = 'zujuan'
     allowed_domains = ['zujuan.21cnjy.com/']
     start_urls = [
-        # 'https://zujuan.21cnjy.com/paper/paper-category-list?xd=2&chid=2',   #初中语文同步试卷
+        'https://zujuan.21cnjy.com/paper/paper-category-list?xd=2&chid=2&categories=548',   #初中语文同步试卷八年级上第一单元
+        'https://zujuan.21cnjy.com/paper/paper-category-list?xd=2&chid=2&categories=567',   #初中语文同步试卷八年级上第二单元
+        'https://zujuan.21cnjy.com/paper/paper-category-list?xd=2&chid=2&categories=572',   #初中语文同步试卷八年级上第二单元
         # 'https://zujuan.21cnjy.com/paper/paper-sync-list?xd=2&chid=2',       #初中语文测试试卷
         # 'https://zujuan.21cnjy.com/paper/paper-exam-list?xd=2&chid=2',       #初中语文真题试卷
-        'http://zujuan.21cnjy.com/paper/paper-exam-list?xd=3&chid=9'         #高中政治高考真题
+        # 'http://zujuan.21cnjy.com/paper/paper-exam-list?xd=3&chid=9'         #高中政治高考真题
     ]
     #学科网:1  组卷网:2   橡皮网:3   中学历史教学网:4   2cnjy:5   菁优网:6
-    site = '2'
+    site = '6'
     base_url = 'https://zujuan.21cnjy.com'
     xd = {
         '1' : "小学",
@@ -171,7 +173,7 @@ class ExerciseSpider(scrapy.Spider):  #抓取单一页面，没有rules
                 dont_filter = True
             )
 
-        if js["pager"]:
+        if js["pager"] != None:
             xml_string = html.fromstring(js["pager"])
             next_link  = xml_string.xpath("//div[@class='pagenum']/a[last()]/@href")[0]
             if next_link:
@@ -195,10 +197,18 @@ class ExerciseSpider(scrapy.Spider):  #抓取单一页面，没有rules
                 exercise                     = ExerciseItem()
                 exercise['subject']          = paper['subject']
                 exercise['grade']            = paper['grade']
+                exercise['site_id']          = self.site
                 exercise['degree']           = self.degree[str(question['difficult_index'])]
                 exercise['source_id']        = question['question_id']
                 exercise['type']             = self.questionTypes[str(question['question_channel_type'])]
                 exercise['description']      = question['question_text']
+
+                imgs = Selector(text=str(exercise['description'])).xpath('//img/@src').extract()
+                description_imgs = {}
+                if len(imgs) > 0:
+                    for img in imgs:
+                        img_url = img
+                        description_imgs[img] = img_url
                 options = question['options']
                 if options != None or options == '':
                     if type(question['options']) == type({}):
@@ -217,6 +227,14 @@ class ExerciseSpider(scrapy.Spider):  #抓取单一页面，没有rules
                 exercise['answer_img']       = question['answer']
                 exercise['method']           = None
                 exercise['method_img']       = question['explanation']
+                children                     = question['list']
+                if children == None:
+                    exercise['is_wrong'] = 0
+                else:
+                    if len(children) > 0:
+                        exercise['is_wrong'] = 1
+                    else:
+                        exercise['is_wrong'] = 0
                 all_points                   = question['t_knowledge']
                 points                       = []
                 if len(all_points) > 0:
@@ -228,5 +246,5 @@ class ExerciseSpider(scrapy.Spider):  #抓取单一页面，没有rules
                 exercise['sort']             = unicode(sort)
                 paper['exercise_num']        = exercise_num
                 exercise['paper']            = paper
-                exercise['description_imgs'] = None
+                exercise['description_imgs'] = description_imgs
                 yield exercise

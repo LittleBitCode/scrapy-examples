@@ -27,9 +27,23 @@ local_redis = redis.Redis(host='127.0.0.1',port=6379)
 class DownloadImagesPipeline(ImagesPipeline):
 
     def get_media_requests(self, item, info):
-        if item['answer_img'] != None and item['method_img'] != None and item['answer_img'] != '' and item['method_img'] != '':
+        if item['answer_img'] != None or item['answer_img'] != '' :
             image_urls = {
                 'answer': item['answer_img'],
+            }
+            for key in dict(image_urls).keys():
+                if image_urls[key] != None and str(image_urls[key]).startswith('http'):
+                    print('-------------  开始下载图片%s -----------' % ( image_urls[key]))
+                    yield Request(
+                        image_urls[key],
+                        meta={
+                            'item'  : item,
+                            'key'   : key,
+                            'index' :'1'
+                        }
+                    )  # 添加meta是为了下面重命名文件名使用
+        if item['method_img'] != None or item['method_img'] != '':
+            image_urls = {
                 'method': item['method_img']
             }
             for key in dict(image_urls).keys():
@@ -60,7 +74,7 @@ class DownloadImagesPipeline(ImagesPipeline):
                     )  # 添加meta是为了下面重命名文件名使用
 
     first_folder = {
-        '2' : 'zujuan_21cnjy',
+        '6' : 'zujuan_21cnjy',
         '4' : 'zxls'
     }
 
@@ -375,7 +389,6 @@ class ocrPipeline(object):
             'SECRET_KEY': 'AGBBRZ8QKGrN1vaMeDosHlLWY7Gaqz',
         },
     ]
-    # current_account = account[1]
     current_account = account[index]
 
     def get_file_content(self,filePath):
@@ -388,27 +401,30 @@ class ocrPipeline(object):
     def ocrImage(self,path,account):
         client = AipOcr(account['APP_ID'], account['API_KEY'], account['SECRET_KEY'])
         result_words = ''
-        if str(path).find('http') >= 0:
-            result_words = ''
+        if str(path).startswith('http'):
+            result = client.basicGeneralUrl(path)
+            result = dict(result)
         else:
             image = self.get_file_content(path)
-            result = client.basicAccurate(image)
+            result = client.basicGeneral(image)
+            # result = client.basicAccurate(image)#高精度识别
             result = dict(result)
-            if result.has_key('error_msg'):
-                result_words = ''
+
+        if result.has_key('error_msg'):
+            # result_words = ''
+            # return result_words
+            try:
+                self.changeBaiduAccount(path=path)
+            except Exception as e:
+                print('555555555555555')
+                # print(result['error_msg'])
+                print(e.message)
+                print('555555555555555')
                 return result_words
-                # try:
-                #     self.changeBaiduAccount(path=path)
-                # except Exception as e:
-                #     print('555555555555555')
-                #     # print(result['error_msg'])
-                #     print(e.message)
-                #     print('555555555555555')
-                #     return result_words
-            else:
-                if int(result['words_result_num']) > 0:
-                    for words in result['words_result']:
-                        result_words += words['words']
+        else:
+            if int(result['words_result_num']) > 0:
+                for words in result['words_result']:
+                    result_words += words['words']
         return result_words
 
     def changeBaiduAccount(self,path):
@@ -443,7 +459,7 @@ class ocrPipeline(object):
             if row:  # 如果数据表中有该条数据
                 self.cursor.execute("select * from exercises where id='%s'" % (row[0]))
                 result = self.cursor.fetchone() #取出该条数据
-                if result[10] != None:  # 判断数据表中该字段是否为空值
+                if result[10] == None:  # 判断数据表中该字段是否为空值
                     result_words = self.ocrImage(filePath,self.current_account)
             else:   # 如果表中没有此条数据
                 result_words = self.ocrImage(filePath,self.current_account)
@@ -451,12 +467,13 @@ class ocrPipeline(object):
                 item['method'] = None
             else:
                 item['method'] = result_words
+                print('++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
         if item['answer_img'] != None and item['answer_img'] != '':
             filePath = "%s/%s" % (rootPath,item['answer_img'])
             if row:  # 如果数据表中有该条数据
                 self.cursor.execute("select * from exercises where id='%s'" % (row[0]))
                 result = self.cursor.fetchone() #取出该条数据
-                if result[13] != None:  # 判断数据表中该字段是否为空值
+                if result[13] == None:  # 判断数据表中该字段是否为空值
                     result_words = self.ocrImage(filePath,self.current_account)
             else:   # 如果表中没有此条数据
                 result_words = self.ocrImage(filePath,self.current_account)
@@ -464,6 +481,7 @@ class ocrPipeline(object):
                 item['answer'] = None
             else:
                 item['answer'] = result_words
+                print('++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
         return item
 
     @classmethod
@@ -498,7 +516,7 @@ class ZujuanPipeline(object):
                    insert into papers(`title`,`site_id`,`year`,`level`,`subject`,`grade`,`type`,`exercise_num`,`views`,`uploaded_at`,`url`)values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                 """
     exercise_sql = """
-                      insert into exercises(`subject`,`grade`,`type`,`degree`,`source_id`,`paper_id`,`description`,`method`,`method_img`,`answer`,`answer_img`,`options`,`points`,`url`,`sort`)values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                      insert into exercises(`subject`,`grade`,`type`,`degree`,`source_id`,`paper_id`,`site_id`,`description`,`method`,`method_img`,`answer`,`answer_img`,`options`,`points`,`url`,`is_wrong`,`sort`)values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                    """
     paper_update_sql = """
                           update papers set `exercise_num` = %s where `url` = %s
@@ -512,6 +530,15 @@ class ZujuanPipeline(object):
     exercise_update_options_sql = """
                                         update exercises set `options` = %s where `url` = %s
                                      """
+    exercise_update_method_img_sql = """
+                                        update exercises set `method_img` = %s where `url` = %s
+                                     """
+    exercise_update_answer_img_sql = """
+                                        update exercises set `answer_img` = %s where `url` = %s
+                                     """
+    exercise_update_site_id_sql = """
+                                        update exercises set `site_id` = %s where `url` = %s
+                                     """
     def __init__(self, settings):
         self.settings = settings
 
@@ -521,10 +548,9 @@ class ZujuanPipeline(object):
             paper = item['paper']
             self.cursor.execute("select id from papers where url='%s'" % (paper['url']))
             row = self.cursor.fetchone()
-            print('===================')
-            print('rowcount:%s' % self.cursor.rowcount)
-            print('row:%s' % row)
-            print('===================')
+            # print('=====================================')
+            # print('rowcount:%s     -----     row:%s' % (self.cursor.rowcount,row[0]))
+            # print('=====================================')
             if self.cursor.rowcount == 0:
                 self.cursor.execute(self.paper_sql,
                                     (paper['title'],
@@ -546,25 +572,37 @@ class ZujuanPipeline(object):
                 paper_id = row[0]
 
             print(">>>>>>>>>>>>>>>>>>>>>>>> new paper id: %s <<<<<<<<<<<<<<<<<<<<<<<<" % (paper_id))
-            self.cursor.execute("select id from exercises where source_id='%s'" % (item['source_id']))
+            self.cursor.execute("select id from exercises where url='%s'" % (item['url']))
             row = self.cursor.fetchone()
             if row :
-                self.cursor.execute("select * from exercises where id='%s'" % (row[0]))
-                result = self.cursor.fetchone()
-                if result[10] != None:
-                    if item['method'] != None:
-                        self.cursor.execute(self.exercise_update_method_sql,(
-                                item['method'],
-                                item['url']
-                        ))
-                if result[13] != None:
-                    if item['answer'] != None:
-                        self.cursor.execute(self.exercise_update_answer_sql, (
-                            item['answer'],
-                            item['url']
-                        ))
-                self.cursor.execute(self.exercise_update_options_sql,(
-                        item['options'],
+                # self.cursor.execute("select * from exercises where id='%s'" % (row[0]))
+                # result = self.cursor.fetchone()
+                # if result[11] == None:
+                # if item['method'] != None:
+                self.cursor.execute(self.exercise_update_method_sql,(
+                        item['method'],
+                        item['url']
+                    ))
+                # if result[14] == None:
+                # if item['answer'] != None:
+                self.cursor.execute(self.exercise_update_answer_sql, (
+                    item['answer'],
+                    item['url']
+                ))
+                # self.cursor.execute(self.exercise_update_options_sql,(
+                #         item['options'],
+                #         item['url']
+                # ))
+                self.cursor.execute(self.exercise_update_answer_img_sql,(
+                        item['answer_img'],
+                        item['url']
+                ))
+                self.cursor.execute(self.exercise_update_method_img_sql,(
+                        item['method_img'],
+                        item['url']
+                ))
+                self.cursor.execute(self.exercise_update_site_id_sql,(
+                        item['site_id'],
                         item['url']
                 ))
             else:
@@ -576,6 +614,7 @@ class ZujuanPipeline(object):
                         item['degree'],
                         item['source_id'],
                         paper_id,
+                        item['site_id'],
                         item['description'],
                         item['method'],
                         item['method_img'],
@@ -584,6 +623,7 @@ class ZujuanPipeline(object):
                         item['options'],
                         item['points'],
                         item['url'],
+                        item['is_wrong'],
                         item['sort']
                     )
                 )

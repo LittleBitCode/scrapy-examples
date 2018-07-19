@@ -111,7 +111,6 @@ class ZxlsSpider(scrapy.Spider):
                             'cid' : '1',
                             'gr'  : '高三级',
                             'cty' : '高考真题',
-                            # 'cty' : '期末考试',
                             'page': '1',
                             'rows': '10',
                             'pyear': '2018',
@@ -153,7 +152,6 @@ class ZxlsSpider(scrapy.Spider):
                     'cid' : '1',
                     'gr'  : '高三级',
                     'cty' : '高考真题',
-                    # 'cty': '期末考试',
                     'page': str(next_page),
                     'rows': '10',
                     'pyear': '2018',
@@ -180,7 +178,7 @@ class ZxlsSpider(scrapy.Spider):
             'subject'       : subject,
             'grade'         : grade,
             'type'          : type,
-            'level'         : '1',
+            'level'         : '0',
             'year'          : year,
             'views'         : views,
             'exercise_num'  : exercise_num,
@@ -196,7 +194,7 @@ class ZxlsSpider(scrapy.Spider):
             if child.name == 'div':
                 tds         = child.find_all('td')
                 description = str(tds[1])
-                imgs = Selector(text=str(child)).xpath('//img/@src').extract()
+                imgs        = Selector(text=str(child)).xpath('//img/@src').extract()
                 is_wrong    = 0
                 description_imgs = {}
                 if len(imgs) > 0:
@@ -209,7 +207,6 @@ class ZxlsSpider(scrapy.Spider):
                 if local_redis['exercise_type'] == '单选题':
                     if len(options) <= 0:
                         is_wrong = 1
-
                 options_string = []
                 for index,option in enumerate(options):
                     options_string.append(str(option).split('．')[-1])
@@ -218,20 +215,23 @@ class ZxlsSpider(scrapy.Spider):
                 sort += 1
                 exercise = {
                     'subject'          : subject,
+                    'site_id'          : self.site,
                     'grade'            : grade,
-                    'degree'           : None,
                     'source_id'        : source_id,
                     'type'             : local_redis['exercise_type'],
                     'description'      : description,
                     'options'          : options,
+                    'degree'           : None,
                     'answer'           : None,
+                    'answer_img'       : None,
                     'method'           : None,
+                    'method_img'       : None,
                     'points'           : None,
                     'url'              : None,
                     'sort'             : sort,
                     'paper'            : paper,
+                    'is_wrong'         : is_wrong,
                     'description_imgs' : description_imgs,
-                    'is_wrong'         : is_wrong
                 }
                 yield Request(
                         self.base_url+'/Web/ashx_/ProblemAttend.ashx?id=' + source_id,
@@ -248,39 +248,20 @@ class ZxlsSpider(scrapy.Spider):
         points_list= []
         for point in points:
             points_list.append(point)
-        points     = json.dumps(points_list)
-        degree     = xml_string.xpath(u"//p[contains(text(),'【难')]/text()")[0].split('】')[-1]
+        exercise['points']     = json.dumps(points_list)
+        exercise['degree']     = xml_string.xpath(u"//p[contains(text(),'【难')]/text()")[0].split('】')[-1]
         method     = xml_string.xpath(u"//p[contains(text(),'【解')]/following-sibling::p[1]/text()")
         if len(method) > 0:
-            method = method[0]
+            exercise['method'] = method[0]
         else:
-            method = None
+            exercise['method'] = None
         if exercise['type'] == '单选题':
             answer = xml_string.xpath(u"//p[contains(text(),'【答')]/text()")[0].split('】')[-1]
         else:
             answer = xml_string.xpath(u"//p[contains(text(),'【答')]/following-sibling::p[1]/text()")
             if len(answer) > 0:
-                answer = answer[0]
+                exercise['answer'] = answer[0]
             else:
-                answer = None
-        yield {
-            'subject'          : exercise['subject'],
-            'site_id'          : self.site,
-            'grade'            : exercise['grade'],
-            'degree'           : degree,
-            'source_id'        : exercise['source_id'],
-            'type'             : exercise['type'],
-            'description'      : exercise['description'],
-            'options'          : exercise['options'],
-            'answer'           : answer,
-            'answer_img'       : None,
-            'method'           : method,
-            'method_img'       : None,
-            'points'           : points,
-            'url'              : None,
-            'is_wrong'         : exercise['is_wrong'],
-            'sort'             : exercise['sort'],
-            'paper'            : exercise['paper'],
-            'description_imgs' : exercise['description_imgs']
-        }
+                exercise['answer'] = None
+        yield exercise
 

@@ -110,12 +110,12 @@ class ZxlsSpider(scrapy.Spider):
                 formdata = {
                             'cid' : '1',
                             'gr'  : '高三级',
-                            # 'cty' : '高考真题',
+                            'cty' : '高考真题',
                             # 'cty' : '期末考试',
                             'page': '1',
                             'rows': '10',
-                            # 'pyear':'2014',
-                            # 'pn':'山东省潍坊市2014届高三第一学期期末考试'
+                            'pyear': '2018',
+                            # 'pn': '2015届高考《步步高》一轮复习配套题库：第22课时 经济建设的发展和曲折'
                            },
                 callback = self.parse_paper_list,
                 dont_filter=True
@@ -152,12 +152,12 @@ class ZxlsSpider(scrapy.Spider):
                 formdata = {
                     'cid' : '1',
                     'gr'  : '高三级',
-                    # 'cty' : '高考真题',
+                    'cty' : '高考真题',
                     # 'cty': '期末考试',
                     'page': str(next_page),
                     'rows': '10',
-                    # 'pyear': '2014',
-                    # 'pn': '山东省潍坊市2014届高三第一学期期末考试'
+                    'pyear': '2018',
+                    # 'pn': '2015届高考《步步高》一轮复习配套题库：第22课时 经济建设的发展和曲折'
                 },
                 callback = self.parse_paper_list,
                 dont_filter=True
@@ -167,7 +167,7 @@ class ZxlsSpider(scrapy.Spider):
         url          = response.url
         title        = response.xpath("//div[@class='sjbt']/h1/text()").extract_first()
         subject      = self.cid[1]
-        grade        = response.xpath("//div[@class='xiaobiaoti']/span[1]/text()").extract_first().replace(u'适用年级：' , '')
+        grade        = response.xpath("//div[@class='xiaobiaoti']/span[1]/text()").extract_first().replace(u'适用年级：' , '').replace(u'级','')
         type         = response.xpath("//div[@class='xiaobiaoti']/span[2]/text()").extract_first().replace(u'试卷类型：' , '')
         year         = response.xpath("//div[@class='xiaobiaoti']/span[4]/text()").extract_first().replace(u'试卷年份：' , '').replace(u'年','')
         exercise_num = response.xpath("//div[@class='xiaobiaoti']/span[5]/text()").extract_first().replace(u'题数：'    , '')
@@ -206,7 +206,6 @@ class ZxlsSpider(scrapy.Spider):
                 options     = child.find_all('td',attrs={'class':'sstd'})
                 if len(options) == 0:
                     options = child.find_all('td', attrs={'class': 'ddtd'})
-
                 if local_redis['exercise_type'] == '单选题':
                     if len(options) <= 0:
                         is_wrong = 1
@@ -251,11 +250,19 @@ class ZxlsSpider(scrapy.Spider):
             points_list.append(point)
         points     = json.dumps(points_list)
         degree     = xml_string.xpath(u"//p[contains(text(),'【难')]/text()")[0].split('】')[-1]
-        method     = xml_string.xpath(u"//p[contains(text(),'【解')]/following-sibling::p[1]/text()")[0]
+        method     = xml_string.xpath(u"//p[contains(text(),'【解')]/following-sibling::p[1]/text()")
+        if len(method) > 0:
+            method = method[0]
+        else:
+            method = None
         if exercise['type'] == '单选题':
             answer = xml_string.xpath(u"//p[contains(text(),'【答')]/text()")[0].split('】')[-1]
         else:
-            answer = xml_string.xpath(u"//p[contains(text(),'【答')]/following-sibling::p[1]/text()")[0]
+            answer = xml_string.xpath(u"//p[contains(text(),'【答')]/following-sibling::p[1]/text()")
+            if len(answer) > 0:
+                answer = answer[0]
+            else:
+                answer = None
         yield {
             'subject'          : exercise['subject'],
             'site_id'          : self.site,

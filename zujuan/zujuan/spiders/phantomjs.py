@@ -19,15 +19,15 @@ class PhantomjsSpider(scrapy.Spider):
         db = client.spiders
         users = db['users']
         rs = users.find_one()
-        print('----- mongodb -----')
+        print('------ mongodb ------')
         print(rs['name'])
-        print('----- mongodb -----')
+        print('------ mongodb ------')
 
         #redis
         r = redis.Redis(host='127.0.0.1',port=6379)
-        print('----- redis -----')
+        print('------ redis ------')
         print(r['name'])
-        print('----- redis -----')
+        print('------ redis ------')
 
         # selector = Selector(text=response.body)
         # print(selector.xpath('//title/text()').extract())

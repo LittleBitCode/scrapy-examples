@@ -158,8 +158,8 @@ IMAGES_STORE  = os.path.join(project_dir, '')
 #     'API_KEY'    : 'WYAFwtoMQoapxd4poaDm7hB2',
 #     'SECRET_KEY' : 'AGBBRZ8QKGrN1vaMeDosHlLWY7GaqzNA',
 # }
-# BAIDUAPI = {
-#     'APP_ID'     : '11532440',
-#     'API_KEY'    : 'hhW4gM2CAZdsUqjUyIA1WxZF',
-#     'SECRET_KEY' : 'Thh51ejbCG4u1eV1CUWa6WYW7blsrsX5',
-# }
+BAIDUAPI = {
+    'APP_ID'     : '11532440',
+    'API_KEY'    : 'hhW4gM2CAZdsUqjUyIA1WxZF',
+    'SECRET_KEY' : 'Thh51ejbCG4u1eV1CUWa6WYW7blsrsX5',
+}

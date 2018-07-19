@@ -18,21 +18,33 @@ class ExerciseSpider(scrapy.Spider):  #抓取单一页面，没有rules
     name = 'zujuan'
     allowed_domains = ['zujuan.21cnjy.com/']
     start_urls = [
-        'https://zujuan.21cnjy.com/paper/paper-category-list?xd=2&chid=2&categories=548',   #初中语文同步试卷八年级上第一单元
-        'https://zujuan.21cnjy.com/paper/paper-category-list?xd=2&chid=2&categories=567',   #初中语文同步试卷八年级上第二单元
-        'https://zujuan.21cnjy.com/paper/paper-category-list?xd=2&chid=2&categories=572',   #初中语文同步试卷八年级上第二单元
-        # 'https://zujuan.21cnjy.com/paper/paper-sync-list?xd=2&chid=2',       #初中语文测试试卷
-        # 'https://zujuan.21cnjy.com/paper/paper-exam-list?xd=2&chid=2',       #初中语文真题试卷
-        # 'http://zujuan.21cnjy.com/paper/paper-exam-list?xd=3&chid=9'         #高中政治高考真题
+        'http://zujuan.21cnjy.com/paper/paper-exam-list?xd=3&chid=9&papertype=9&province_id=16&paperyear=2018'         #高中政治高考真题
     ]
-    #学科网:1  组卷网:2   橡皮网:3   中学历史教学网:4   2cnjy:5   菁优网:6
-    site = '6'
+    # 1:组卷网          :http://www.zujuan.com/
+    # 2:橡皮网          :http://xiangpi.com/
+    # 3:学科网(组卷)     :http://zujuan.xkw.com/
+    # 4:菁优网          :http://www.jyeoo.com/
+    # 5:小学学科网       :http://www.xuekeedu.com/
+    # 6:21世纪教育网     :https://www.21cnjy.com/
+    # 7:学科网           :http://zxxk.com/
+    # 8:21组卷平台       :https://zujuan.21cnjy.com
+    # 9:好教育云平台      :http://www.jtyhjy.com/
+    #10:高考资源网        :https://www.ks5u.com/
+    #11:学科王           :http://www.xuekewang.com/
+    #12:中华资源库        :http://www.ziyuanku.com/
+    #13:中学历史教学园地   :http://zujuan.zxls.com/
+    site = '8'
     base_url = 'https://zujuan.21cnjy.com'
     xd = {
         '1' : "小学",
         '2' : '初中',
         '3' : '高中',
     }
+    paper_type = {
+        '9' : '高考模拟',
+        '10': '高考真卷'
+    }
+
     chid = {
         '2' : '语文',
         '3' : '数学',

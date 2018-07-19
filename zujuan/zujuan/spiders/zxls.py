@@ -14,9 +14,12 @@ import random
 from bs4 import BeautifulSoup
 import sys
 reload(sys)
+import redis
 sys.setdefaultencoding("utf-8")
 # 实例化一个cookiejar对象
 cookie_jar = CookieJar()
+
+local_redis = redis.Redis(host='127.0.0.1',port=6379)
 
 class ZxlsSpider(scrapy.Spider):
     name = 'zxls'
@@ -28,7 +31,7 @@ class ZxlsSpider(scrapy.Spider):
         'http://zujuan.zxls.com/PaperList.aspx',
     ]
 
-    site = '4'
+    site = '13'
 
     base_url = 'http://zujuan.zxls.com'
 
@@ -51,7 +54,7 @@ class ZxlsSpider(scrapy.Spider):
     exercise_type = ''
 
     cookies = {
-        'ASP.NET_SessionId':'rtj5qun2jjcuyszcwfdfrrcx',
+        'ASP.NET_SessionId':'j3xkngabrtcdzrx3kxrshjrn',
         'kemu':'1'
     }
     # cookies = {}
@@ -68,7 +71,7 @@ class ZxlsSpider(scrapy.Spider):
         viewStateGenerator  = Selector(response).xpath('//input[@name="__VIEWSTATEGENERATOR"]/@value').extract()[0]
         eventValidation     = Selector(response).xpath('//input[@name="__EVENTVALIDATION"]/@value').extract()[0]
         captcha_img         = self.base_url + '/' + Selector(response).xpath("//img[@id='imgcode']/@src").extract()[0]
-        localPath           = '/Users/zhengchaohua/Desktop/images/captcha.png'
+        localPath           = '/Users/zhengchaohua/Desktop/Media/Images/captcha.png'
         urllib.urlretrieve(captcha_img, localPath)
         # captcha_value       = raw_input('查看captcha.png,有验证码请输入:')
         formdata = {
@@ -188,10 +191,13 @@ class ZxlsSpider(scrapy.Spider):
         for child in soup.find('div',id='subjectList').contents:
             if child.name == None:
                 continue
+            if child.name == 'p':
+                local_redis.set('exercise_type',child.get_text().split('、')[-1])
             if child.name == 'div':
                 tds         = child.find_all('td')
                 description = str(tds[1])
                 imgs = Selector(text=str(child)).xpath('//img/@src').extract()
+                is_wrong    = 0
                 description_imgs = {}
                 if len(imgs) > 0:
                     for img in imgs:
@@ -201,22 +207,22 @@ class ZxlsSpider(scrapy.Spider):
                 if len(options) == 0:
                     options = child.find_all('td', attrs={'class': 'ddtd'})
 
-                options_string = {}
-                if len(options) > 0:
-                    exercise_type = '单选题'
-                else:
-                    exercise_type = '材料阅读'
+                if local_redis['exercise_type'] == '单选题':
+                    if len(options) <= 0:
+                        is_wrong = 1
+
+                options_string = []
                 for index,option in enumerate(options):
-                    string = chr(ord(str(int(index))) + 17)
-                    options_string[string] = str(option).split('．')[-1]
+                    options_string.append(str(option).split('．')[-1])
                 options   = json.dumps(options_string)
                 source_id = child.find_all('input')[0]['value']
                 sort += 1
                 exercise = {
                     'subject'          : subject,
+                    'grade'            : grade,
                     'degree'           : None,
                     'source_id'        : source_id,
-                    'type'             : exercise_type,
+                    'type'             : local_redis['exercise_type'],
                     'description'      : description,
                     'options'          : options,
                     'answer'           : None,
@@ -225,7 +231,8 @@ class ZxlsSpider(scrapy.Spider):
                     'url'              : None,
                     'sort'             : sort,
                     'paper'            : paper,
-                    'description_imgs' : description_imgs
+                    'description_imgs' : description_imgs,
+                    'is_wrong'         : is_wrong
                 }
                 yield Request(
                         self.base_url+'/Web/ashx_/ProblemAttend.ashx?id=' + source_id,
@@ -238,39 +245,21 @@ class ZxlsSpider(scrapy.Spider):
         exercise   = response.meta['exercise']
         js         = json.loads(response.body)
         xml_string = html.fromstring(js['data'])
-        points     = str(xml_string.xpath("//p[3]/text()")[0]).split('】')[-1].split('；')
+        points     = xml_string.xpath(u"//p[contains(text(),'【知')]/text()")[0].split('】')[-1].split('；')
         points_list= []
         for point in points:
             points_list.append(point)
         points     = json.dumps(points_list)
-
-        degree     = str(xml_string.xpath("//p[last()-2]/text()")[0]).split('】')[-1]
+        degree     = xml_string.xpath(u"//p[contains(text(),'【难')]/text()")[0].split('】')[-1]
+        method     = xml_string.xpath(u"//p[contains(text(),'【解')]/following-sibling::p[1]/text()")[0]
         if exercise['type'] == '单选题':
-            method = xml_string.xpath("//p[last()-4]/text()")
-            if len(method) > 0:
-                method = str(method[0])
-            else:
-                method = None
-
-            answer = xml_string.xpath("//p[last()-3]/text()")
-            if len(answer) > 0:
-                answer = str(answer[0]).split('】')[-1]
-            else:
-                answer = None
+            answer = xml_string.xpath(u"//p[contains(text(),'【答')]/text()")[0].split('】')[-1]
         else:
-            method = xml_string.xpath("//p[last()-5]/text()")
-            if len(method) > 0:
-                method = str(method[0])
-            else:
-                method = None
-
-            answer = xml_string.xpath("//p[last()-3]/text()")
-            if len(answer) > 0:
-                answer = str(answer[0])
-            else:
-                answer = None
+            answer = xml_string.xpath(u"//p[contains(text(),'【答')]/following-sibling::p[1]/text()")[0]
         yield {
             'subject'          : exercise['subject'],
+            'site_id'          : self.site,
+            'grade'            : exercise['grade'],
             'degree'           : degree,
             'source_id'        : exercise['source_id'],
             'type'             : exercise['type'],
@@ -282,6 +271,7 @@ class ZxlsSpider(scrapy.Spider):
             'method_img'       : None,
             'points'           : points,
             'url'              : None,
+            'is_wrong'         : exercise['is_wrong'],
             'sort'             : exercise['sort'],
             'paper'            : exercise['paper'],
             'description_imgs' : exercise['description_imgs']

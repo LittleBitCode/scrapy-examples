@@ -54,7 +54,7 @@ class ZxlsSpider(scrapy.Spider):
     exercise_type = ''
 
     cookies = {
-        'ASP.NET_SessionId':'j3xkngabrtcdzrx3kxrshjrn',
+        'ASP.NET_SessionId':'0smgh4bxmkrkisx0fij25ezh',
         'kemu':'1'
     }
     # cookies = {}
@@ -248,20 +248,29 @@ class ZxlsSpider(scrapy.Spider):
         points_list= []
         for point in points:
             points_list.append(point)
-        exercise['points']     = json.dumps(points_list)
-        exercise['degree']     = xml_string.xpath(u"//p[contains(text(),'【难')]/text()")[0].split('】')[-1]
-        method     = xml_string.xpath(u"//p[contains(text(),'【解')]/following-sibling::p[1]/text()")
-        if len(method) > 0:
-            exercise['method'] = method[0]
+        exercise['points']        = json.dumps(points_list)
+        exercise['degree']        = xml_string.xpath(u"//p[contains(text(),'【难')]/text()")[0].split('】')[-1]
+        methods     = xml_string.xpath(u"//p[contains(text(),'【解')]/following-sibling::p[1]/text()")
+        if len(methods) > 0:
+            exercise['method'] = ''
+            for method in methods:
+                if method == None:
+                    continue
+                exercise['method'] += method
         else:
             exercise['method'] = None
         if exercise['type'] == '单选题':
-            answer = xml_string.xpath(u"//p[contains(text(),'【答')]/text()")[0].split('】')[-1]
+            exercise['answer']     = xml_string.xpath(u"//p[contains(text(),'【答')]/text()")[0].split('】')[-1]
         else:
-            answer = xml_string.xpath(u"//p[contains(text(),'【答')]/following-sibling::p[1]/text()")
-            if len(answer) > 0:
-                exercise['answer'] = answer[0]
+            answers = xml_string.xpath(u"//p[contains(text(),'【答')]/following-sibling::p[1]/text()")
+            if len(answers) > 0:
+                exercise['answer'] = ''
+                for answer in answers:
+                    if answer == None:
+                        continue
+                    exercise['answer'] += answer
             else:
                 exercise['answer'] = None
+            print(exercise['answer'])
         yield exercise
 

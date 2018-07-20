@@ -18,9 +18,7 @@ class ChapterExerciseSpider(scrapy.Spider):
     name = 'c_e'
     allowed_domains = ['zujuan.21cnjy.com']
     start_urls = [
-        # 'http://zujuan.21cnjy.com/'
         'https://zujuan.21cnjy.com/catalog/cate-tree?xd=2&chid=2',
-        # 'https://zujuan.21cnjy.com/question/list?xd=2&chid=2&categories=107564&sort_field=time&filterquestion=0&page=1'
     ]
     site = '8'
     base_url = 'https://zujuan.21cnjy.com'
@@ -94,7 +92,7 @@ class ChapterExerciseSpider(scrapy.Spider):
         '20': '历史与社会',
         '21': '社会思品',
     }
-    # 获取版本信息
+    # 解析版本信息
     def parse(self, response):
         js_editions = json.loads(response.body)
         for js_edition in js_editions:
@@ -109,7 +107,7 @@ class ChapterExerciseSpider(scrapy.Spider):
                 dont_filter = True,
             )
 
-    #获取单元
+    #解析单元 章节
     def parse_textbook(self, response):
         js_textbooks = json.loads(response.body)
         for js_textbook in js_textbooks:
@@ -123,7 +121,7 @@ class ChapterExerciseSpider(scrapy.Spider):
                 meta        = textbook,
                 dont_filter = True,
             )
-
+    # 解析试题
     def parse_exercise(self, response):
         # 获取url参数列表
         result = urlparse.urlparse(response.url)
@@ -139,7 +137,7 @@ class ChapterExerciseSpider(scrapy.Spider):
             exercise['grade']            = self.xd[question['xd']]
             exercise['site_id']          = self.site
             exercise['degree']           = self.degree[str(question['difficult_index'])]
-            exercise['paper_id']        = question['paperid']
+            exercise['paper_id']         = question['paperid']
             exercise['source_id']        = question['question_id']
             exercise['type']             = self.questionTypes[str(question['question_channel_type'])]
             exercise['description']      = question['question_text']
@@ -186,8 +184,6 @@ class ChapterExerciseSpider(scrapy.Spider):
             exercise['url']              = self.base_url + '/question/detail/' + question['question_id']
             exercise['sort']             = unicode(sort)
             exercise['description_imgs'] = description_imgs
-            # print(exercise)
-            # return
             yield exercise
 
         if js["pager"] != None:

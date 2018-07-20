@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
-import scrapy
-from scrapy.http import Request , FormRequest
-from scrapy.selector import Selector
-from scrapy.linkextractors import LinkExtractor
-from scrapy.spiders import CrawlSpider, Rule
-from lxml import html
-import json
-from scrapy.http.cookies import CookieJar
-import urllib
-import time
+
 import re
-import random
-from bs4 import BeautifulSoup
 import sys
-reload(sys)
+import json
+import time
 import redis
+import scrapy
+import urllib
+from lxml                import html
+from bs4                 import BeautifulSoup
+from scrapy.selector     import Selector
+from scrapy.http.cookies import CookieJar
+from scrapy.http         import Request , FormRequest
+
+reload(sys)
 sys.setdefaultencoding("utf-8")
 # 实例化一个cookiejar对象
 cookie_jar = CookieJar()
@@ -110,7 +109,7 @@ class ZxlsSpider(scrapy.Spider):
                 formdata = {
                             'cid' : '1',
                             'gr'  : '高三级',
-                            'cty' : '高考真题',
+                            # 'cty' : '高考真题',
                             'page': '1',
                             'rows': '10',
                             'pyear': '2018',
@@ -151,7 +150,7 @@ class ZxlsSpider(scrapy.Spider):
                 formdata = {
                     'cid' : '1',
                     'gr'  : '高三级',
-                    'cty' : '高考真题',
+                    # 'cty' : '高考真题',
                     'page': str(next_page),
                     'rows': '10',
                     'pyear': '2018',
@@ -199,18 +198,23 @@ class ZxlsSpider(scrapy.Spider):
                 description_imgs = {}
                 if len(imgs) > 0:
                     for img in imgs:
-                        img_url = self.base_url+'/'+img
-                        description_imgs[img] = img_url
+                        if str(img).startswith('../'):
+                            imgUlr =  str(img).split('..')[-1]
+                        if str(img).startswith('data:'):
+                            continue
+                        else:
+                            imgUlr = str(img)
+                        description_imgs[img] = self.base_url+imgUlr
                 options     = child.find_all('td',attrs={'class':'sstd'})
                 if len(options) == 0:
                     options = child.find_all('td', attrs={'class': 'ddtd'})
                 if local_redis['exercise_type'] == '单选题':
-                    if len(options) <= 0:
+                    if len(options) < 1:
                         is_wrong = 1
                 options_string = []
                 for index,option in enumerate(options):
-                    options_string.append(str(option).split('．')[-1])
-                options   = json.dumps(options_string)
+                    options_string.append(str(option).split('．')[-1].replace(u'</td>',''))
+                options   = json.dumps(options_string,ensure_ascii=False) # 不转码 存储到数据库为中文
                 source_id = child.find_all('input')[0]['value']
                 sort += 1
                 exercise = {
@@ -221,12 +225,8 @@ class ZxlsSpider(scrapy.Spider):
                     'type'             : local_redis['exercise_type'],
                     'description'      : description,
                     'options'          : options,
-                    'degree'           : None,
-                    'answer'           : None,
                     'answer_img'       : None,
-                    'method'           : None,
                     'method_img'       : None,
-                    'points'           : None,
                     'url'              : None,
                     'sort'             : sort,
                     'paper'            : paper,
@@ -248,7 +248,7 @@ class ZxlsSpider(scrapy.Spider):
         points_list= []
         for point in points:
             points_list.append(point)
-        exercise['points']        = json.dumps(points_list)
+        exercise['points']        = json.dumps(points_list,ensure_ascii=False) # 不转码 存储到数据库为中文
         exercise['degree']        = xml_string.xpath(u"//p[contains(text(),'【难')]/text()")[0].split('】')[-1]
         methods     = xml_string.xpath(u"//p[contains(text(),'【解')]/following-sibling::p[1]/text()")
         if len(methods) > 0:
@@ -271,6 +271,5 @@ class ZxlsSpider(scrapy.Spider):
                     exercise['answer'] += answer
             else:
                 exercise['answer'] = None
-            print(exercise['answer'])
         yield exercise
 

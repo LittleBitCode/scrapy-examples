@@ -29,4 +29,15 @@ class ExerciseItem(Item):
     description_imgs = Field()
 
 class ImageItem(Item):
-    image_urls  = Field()
+    image_urls       = Field()
+
+# 版本信息
+class EditionItem(Item):
+    id               = Field()
+    title            = Field()
+    hasChild         = Field()
+
+class TextBookItem(Item):
+    id               = Field()
+    title            = Field()
+    hasChild         = Field()

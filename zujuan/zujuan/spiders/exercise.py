@@ -1,17 +1,20 @@
 # -*- coding: utf-8 -*-
-import scrapy
-import logging
 import re
-from w3lib.html import remove_tags
-from lxml import html
-from scrapy.http import Request, FormRequest, HtmlResponse
-from scrapy.selector import Selector
+import sys
 import json
-from zujuan.papers import Paper
-from zujuan.items import ExerciseItem
 import time
+import scrapy
 import urlparse
-import operator
+
+from lxml            import html
+from scrapy.http     import Request, FormRequest
+from scrapy.selector import Selector
+
+from zujuan.papers   import Paper
+from zujuan.items    import ExerciseItem
+
+reload(sys)
+sys.setdefaultencoding("utf-8")
 
 #CrawlSpider用来遍布抓取，通过rules来查找所有符合的URL来爬去信息
 class ExerciseSpider(scrapy.Spider):  #抓取单一页面，没有rules
@@ -230,7 +233,7 @@ class ExerciseSpider(scrapy.Spider):  #抓取单一页面，没有rules
                         if len(allkeys) > 0:
                             for key in allkeys:
                                 the_options.append(options[key])
-                            exercise['options'] = json.dumps(the_options)
+                            exercise['options'] = json.dumps(the_options,ensure_ascii=False) # 不转码 存储到数据库为中文
                     else:
                         exercise['options']  = None
                 else:
@@ -253,7 +256,7 @@ class ExerciseSpider(scrapy.Spider):  #抓取单一页面，没有rules
                     for point in all_points:
                         if point != None:
                             points.append(str(point['name']))
-                exercise['points']           = json.dumps(points)
+                exercise['points']           = json.dumps(points,ensure_ascii=False) # 不转码 存储到数据库为中文
                 exercise['url']              = self.base_url + '/question/detail/' + question['question_id']
                 exercise['sort']             = unicode(sort)
                 paper['exercise_num']        = exercise_num

@@ -5,22 +5,20 @@
 #
 # Don't forget to add your pipeline to the ITEM_PIPELINES setting
 # See: https://doc.scrapy.org/en/latest/topics/item-pipeline.html
-import pymysql
-import logging
-import json
+
 import re
-from scrapy import Request
-from scrapy.pipelines.images import ImagesPipeline
-from scrapy.exceptions import DropItem
-import codecs
-import requests
-import os
-from zujuan.items import ImageItem,ExerciseItem
+import json
 import time
-from aip import AipOcr
-import zujuan.settings as set
-import random
 import redis
+import pymysql
+import zujuan.settings       as set
+
+from aip                     import AipOcr
+from scrapy                  import Request
+from scrapy.pipelines.images import ImagesPipeline
+from scrapy.exceptions       import DropItem
+from zujuan.items            import ImageItem
+from zujuan.items            import ExerciseItem
 
 local_redis = redis.Redis(host='127.0.0.1',port=6379)
 # 下载图片
@@ -29,6 +27,7 @@ class DownloadImagesPipeline(ImagesPipeline):
         '8': 'zujuan_21cnjy',
         '13': 'zxls'
     }
+    # 1. 下载图片
     def get_media_requests(self, item, info):
         if item['answer_img'] != None or item['answer_img'] != '' :
             image_urls = {
@@ -75,19 +74,18 @@ class DownloadImagesPipeline(ImagesPipeline):
                             'index': str(index)
                         }
                     )  # 添加meta是为了下面重命名文件名使用
-    # 重写保存图片路径方法
+    # 2. 重写保存图片路径方法
     def file_path(self, request, response=None, info=None):
         item        = request.meta['item']
-        paper       = item['paper']
         firstFolder = request.meta['key']
         image_guid  = time.strftime("%Y-%m-%d", time.localtime(time.time()))
         name        = item['source_id'] + '_' + request.meta['index']
         ext         = str(request.url.split('/')[-1].split('.')[-1]).split('?')[0]
         image_name  = name + '.' + ext
-        key         = str(paper['site_id'])
+        key         = str(item['site_id'])
         filename    = u'{0}/{1}/{2}'.format(self.first_folder[key],firstFolder, image_name)
         return filename
-    # 图片下载完成
+    # 3. 图片下载完成
     def item_completed(self, results, item, info):
         image_paths = [x['path'] for ok, x in results if ok]  # ok判断是否下载成功
         if not image_paths:
@@ -400,6 +398,8 @@ class ocrPipeline(object):
         if str(path).startswith('http'):
             result = client.basicGeneralUrl(path)
             result = dict(result)
+        elif str(path).find('http') > 0:
+            return ''
         else:
             image = self.get_file_content(path)
             result = client.basicGeneral(image)
@@ -413,7 +413,7 @@ class ocrPipeline(object):
                 print('--------------------------------')
                 print(e.message)
                 print('--------------------------------')
-                return result_words
+                return ''
         else:
             if int(result['words_result_num']) > 0:
                 for words in result['words_result']:
@@ -442,7 +442,7 @@ class ocrPipeline(object):
         self.ocrImage(path=path, account=self.account[index])
 
     def process_item(self, item, spider):
-        if spider.name == 'zujuan':
+        if spider.name == 'zujuan' or spider.name == 'c_e':
             result_words = ''
             #1.判断数据表中是否存在
             self.cursor.execute("select id from exercises where site_id='%s' and source_id = '%s'" % (item['site_id'],item['source_id']))
@@ -507,29 +507,36 @@ class ocrPipeline(object):
 
 class ZujuanPipeline(object):
     paper_sql = """
-                   insert into papers(`title`,`site_id`,`year`,`level`,`subject`,`grade`,`type`,`exercise_num`,`views`,`uploaded_at`,`url`)values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                   insert into papers(
+                   `title` ,`site_id` ,`year`         ,`level` ,`subject`     ,
+                   `grade` ,`type`    ,`exercise_num` ,`views` ,`uploaded_at` ,
+                   `url`
+                   )values(
+                   %s,%s,%s,%s,%s,
+                   %s,%s,%s,%s,%s,
+                   %s)
                 """
     exercise_sql = """
-                      insert into exercises(`subject`,`grade`,`type`,`degree`,`source_id`,`paper_id`,`site_id`,`description`,`method`,`method_img`,`answer`,`answer_img`,`options`,`points`,`url`,`is_wrong`,`sort`)values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                      insert into exercises(
+                      `subject`  ,`grade`      ,`type`        ,`degree` ,`source_id`  ,
+                      `paper_id` ,`site_id`    ,`description` ,`method` ,`method_img` ,
+                      `answer`   ,`answer_img` ,`options`     ,`points` ,`url`        ,
+                      `is_wrong` ,`sort`
+                      ) values( 
+                      %s,%s,%s,%s,%s,
+                      %s,%s,%s,%s,%s,
+                      %s,%s,%s,%s,%s,
+                      %s,%s)
                    """
-    paper_update_sql = """
-                          update papers set `exercise_num` = %s where `url` = %s
-                       """
+    paper_update_exercise_num_sql = """
+                                    update papers set `exercise_num` = %s where `url` = %s
+                                    """
     exercise_update_method_sql = """
                                     update exercises set `method` = %s where `url` = %s
                                  """
     exercise_update_answer_sql = """
                                     update exercises set `answer` = %s where `url` = %s
                                  """
-    exercise_update_options_sql = """
-                                        update exercises set `options` = %s where `url` = %s
-                                     """
-    exercise_update_method_img_sql = """
-                                        update exercises set `method_img` = %s where `url` = %s
-                                     """
-    exercise_update_answer_img_sql = """
-                                        update exercises set `answer_img` = %s where `url` = %s
-                                     """
 
     def __init__(self, settings):
         self.settings = settings
@@ -557,7 +564,7 @@ class ZujuanPipeline(object):
                 paper_id = self.cursor.lastrowid
             else:
                 if spider.name == 'zujuan':
-                    self.cursor.execute(self.paper_update_sql,(paper['exercise_num'],paper['url']))
+                    self.cursor.execute(self.paper_update_exercise_num_sql,(paper['exercise_num'],paper['url']))
                 paper_id = row[0]
 
             print(">>>>>>>>>>>>>>>>>>>>>>>> new paper id: %s <<<<<<<<<<<<<<<<<<<<<<<<" % (paper_id))
@@ -578,14 +585,6 @@ class ZujuanPipeline(object):
                             item['answer'],
                             item['url']
                         ))
-                # self.cursor.execute(self.exercise_update_answer_img_sql,(
-                #         item['answer_img'],
-                #         item['url']
-                # ))
-                # self.cursor.execute(self.exercise_update_method_img_sql,(
-                #         item['method_img'],
-                #         item['url']
-                # ))
             else:   # 写入试题表
                 self.cursor.execute(self.exercise_sql, (
                         item['subject'],
@@ -607,6 +606,46 @@ class ZujuanPipeline(object):
                         item['sort']
                     )
                 )
+        elif spider.name == 'c_e':
+            self.cursor.execute("select id from exercises where site_id='%s' and source_id = '%s'" % (
+            item['site_id'], item['source_id']))
+            row = self.cursor.fetchone()
+            if row:
+                self.cursor.execute("select * from exercises where id='%s'" % (row[0]))
+                result = self.cursor.fetchone()
+                if result[10] == None:
+                    if item['method'] != None:
+                        self.cursor.execute(self.exercise_update_method_sql, (
+                            item['method'],
+                            item['url']
+                        ))
+                if result[13] == None:
+                    if item['answer'] != None:
+                        self.cursor.execute(self.exercise_update_answer_sql, (
+                            item['answer'],
+                            item['url']
+                        ))
+            else:  # 写入试题表
+                self.cursor.execute(self.exercise_sql, (
+                    item['subject'],
+                    item['grade'],
+                    item['type'],
+                    item['degree'],
+                    item['source_id'],
+                    item['paper_id'],
+                    item['site_id'],
+                    item['description'],
+                    item['method'],
+                    item['method_img'],
+                    item['answer'],
+                    item['answer_img'],
+                    item['options'],
+                    item['points'],
+                    item['url'],
+                    item['is_wrong'],
+                    item['sort']
+                )
+                                    )
         else:
             spider.log('Undefined name: %s' % spider.name)
         return item

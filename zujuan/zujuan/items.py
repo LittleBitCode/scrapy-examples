@@ -26,18 +26,58 @@ class ExerciseItem(Item):
     sort             = Field()
     paper            = Field()
     is_wrong         = Field()
+    section          = Field()
+    subject          = Field()
+    editon           = Field()
+    textbook         = Field()
+    unit             = Field()
+    term             = Field()
+    chapter          = Field()
+    parent_id        = Field()
+    subjects         = Field()
     description_imgs = Field()
+
 
 class ImageItem(Item):
     image_urls       = Field()
 
+# 科目
+class SubjectItem(Item):
+    id               = Field()
+    name             = Field()
+    site_id          = Field()
+    section_id       = Field()
+
 # 版本信息
 class EditionItem(Item):
     id               = Field()
-    title            = Field()
-    hasChild         = Field()
+    name             = Field()
+    site_id          = Field()
+    subject_id       = Field()
+    section_id       = Field()
 
 class TextBookItem(Item):
     id               = Field()
-    title            = Field()
-    hasChild         = Field()
+    name             = Field()
+    term             = Field()
+    grade            = Field()
+    subject          = Field()
+    edition          = Field()
+    site_id          = Field()
+    source_id        = Field()
+    edition_id       = Field()
+
+
+class ChapterItem(Item):
+    id               = Field()
+    source_id        = Field()
+    edition_id       = Field()
+    edition          = Field()
+    textbook_id      = Field()
+    textbook         = Field()
+    name             = Field()
+    parent_id        = Field()
+    subject          = Field()
+    grade            = Field()
+    have_child       = Field()
+    site_id          = Field()

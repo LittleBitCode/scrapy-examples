@@ -49,11 +49,14 @@ class ZxlsSpider(scrapy.Spider):
     cid = {
         1 : '历史'
     }
+    year  = '2017'
+    grade = '高三级'
+    cty   = ''
 
     exercise_type = ''
 
     cookies = {
-        'ASP.NET_SessionId':'0smgh4bxmkrkisx0fij25ezh',
+        'ASP.NET_SessionId':'q3ibl0stjs0rvx3ndqyeyq2j',
         'kemu':'1'
     }
     # cookies = {}
@@ -108,11 +111,11 @@ class ZxlsSpider(scrapy.Spider):
                 meta = {"cookiejar":response.meta["cookiejar"]},
                 formdata = {
                             'cid' : '1',
-                            'gr'  : '高三级',
-                            # 'cty' : '高考真题',
+                            'gr'  : self.grade,
+                            'cty' : self.cty,
                             'page': '1',
                             'rows': '10',
-                            'pyear': '2018',
+                            'pyear': self.year,
                             # 'pn': '2015届高考《步步高》一轮复习配套题库：第22课时 经济建设的发展和曲折'
                            },
                 callback = self.parse_paper_list,
@@ -149,11 +152,11 @@ class ZxlsSpider(scrapy.Spider):
                 meta     = {"cookiejar": response.meta["cookiejar"]},
                 formdata = {
                     'cid' : '1',
-                    'gr'  : '高三级',
-                    # 'cty' : '高考真题',
+                    'gr'  : self.grade,
+                    'cty' : self.cty,
                     'page': str(next_page),
                     'rows': '10',
-                    'pyear': '2018',
+                    'pyear': self.year,
                     # 'pn': '2015届高考《步步高》一轮复习配套题库：第22课时 经济建设的发展和曲折'
                 },
                 callback = self.parse_paper_list,
@@ -162,7 +165,7 @@ class ZxlsSpider(scrapy.Spider):
 
     def parse_exercise_list(self, response):
         url          = response.url
-        title        = response.xpath("//div[@class='sjbt']/h1/text()").extract_first()
+        title        = response.xpath("//div[@class='sjbt']/h1/text()").extract_first().split('. ')[-1]
         subject      = self.cid[1]
         grade        = response.xpath("//div[@class='xiaobiaoti']/span[1]/text()").extract_first().replace(u'适用年级：' , '').replace(u'级','')
         type         = response.xpath("//div[@class='xiaobiaoti']/span[2]/text()").extract_first().replace(u'试卷类型：' , '')
@@ -200,7 +203,10 @@ class ZxlsSpider(scrapy.Spider):
                     for img in imgs:
                         if str(img).startswith('../'):
                             imgUlr =  str(img).split('..')[-1]
-                        if str(img).startswith('data:'):
+                        elif str(img).startswith('data:'):
+                            continue
+                        elif str(img).startswith('file:'):
+                            is_wrong = 1
                             continue
                         else:
                             imgUlr = str(img)

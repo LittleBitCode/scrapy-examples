@@ -506,6 +506,7 @@ class ocrPipeline(object):
         self.connect.close()
 
 class ZujuanPipeline(object):
+    # 试卷
     paper_sql = """
                    insert into papers(
                    `title` ,`site_id` ,`year`         ,`level` ,`subject`     ,
@@ -516,6 +517,7 @@ class ZujuanPipeline(object):
                    %s,%s,%s,%s,%s,
                    %s)
                 """
+    #习题
     exercise_sql = """
                       insert into exercises(
                       `subject`  ,`grade`      ,`type`        ,`degree` ,`source_id`  ,
@@ -528,12 +530,68 @@ class ZujuanPipeline(object):
                       %s,%s,%s,%s,%s,
                       %s,%s)
                    """
+    # 学段 （小学 初中 高中...）
+    section_sql  = """
+                        insert into sections(
+                        `name`,`site_id`
+                        ) values (
+                        %s,%s)
+                    """
+    # 学科 （语文 数学 ...）
+    subject_sql = """
+                      insert into subjects(
+                      `name`,`site_id`,`section_id`
+                      ) values (
+                      %s,%s,%s)
+                 """
+    # 版本 （人教版 部编版 ...）
+    edition_sql = """
+                        insert into editions(
+                        `id`,`name`,`subject_id`,`site_id`,`section_id`
+                        ) values (
+                        %s,%s,%s,%s,%s)
+                    """
+    # 年级 （七年级上册 七年级下册 ...）
+    textbook_sql = """
+                        insert into textbooks(
+                        `name`,`source_id`,`edition`,`edition_id`,`site_id`,
+                        `grade`,`subject`,`term`
+                        ) values (
+                        %s,%s,%s,%s,%s,
+                        %s,%s,%s)
+                    """
+    # 章节 （第一单元 第二单元 有理数 无理数 ...）
+    chapter_sql = """
+                        insert into chapters(
+                        `name`  ,`parent_id` ,`source_id` ,`edition`     ,`edition_id`  ,
+                        `grade` ,`subject`   ,`textbook`  ,`textbook_id` ,`have_child`
+                        ) values (
+                        %s,%s,%s,%s,%s,
+                        %s,%s,%s,%s,%s)
+                    """
+    # 章节对应的试卷
+    chapter_paper_sql = """
+                        insert into chapter_paper(
+                        `chapter_id`,`paper_id`
+                        )values (
+                        %s,%s)
+                        """
+    # 习题对应的试卷
+    exercise_paper_sql = """
+                        insert into exercise_paper(
+                        `exercise_id`,`paper_id`
+                        )values (
+                        %s,%s)
+                        """
+    #更新试卷习题数量
     paper_update_exercise_num_sql = """
                                     update papers set `exercise_num` = %s where `url` = %s
                                     """
+    # 图片识别后 更新试题解析
     exercise_update_method_sql = """
                                     update exercises set `method` = %s where `url` = %s
                                  """
+    # 图片识别后 更新试题答案
     exercise_update_answer_sql = """
                                     update exercises set `answer` = %s where `url` = %s
                                  """
@@ -607,6 +665,142 @@ class ZujuanPipeline(object):
                     )
                 )
         elif spider.name == 'c_e':
+            paper = item['paper']
+            self.cursor.execute("select id from papers where url='%s'" % (paper['url']))
+            row = self.cursor.fetchone()
+            if self.cursor.rowcount == 0:
+                self.cursor.execute(self.paper_sql,
+                                    (paper['title'],
+                                     paper['site_id'],
+                                     paper['year'],
+                                     paper['level'],
+                                     paper['subject'],
+                                     paper['grade'],
+                                     paper['type'],
+                                     paper['exercise_num'],
+                                     paper['views'],
+                                     paper['uploaded_at'],
+                                     paper['url'])
+                                    )
+                paper_id = self.cursor.lastrowid
+            else:
+                self.cursor.execute(self.paper_update_exercise_num_sql, (paper['exercise_num'], paper['url']))
+                paper_id = row[0]
+            # 1. section
+            section = item['section']
+            self.cursor.execute("select id from sections where site_id='%s' and name='%s'" %(item['site_id'],section['name']))
+            row = self.cursor.fetchone()
+            if row:
+                section_id = row[0]
+            else:
+                self.cursor.execute(self.section_sql,(
+                    section['name'],
+                    item['site_id']
+                ))
+                section_id = self.cursor.lastrowid
+            # 2. subject
+            subject = item['subjects']
+            self.cursor.execute("select id from subjects where site_id='%s' and name='%s'" %(item['site_id'],subject['name']))
+            row = self.cursor.fetchone()
+            if row:
+                subject_id = row[0]
+            else:
+                self.cursor.execute(self.subject_sql, (
+                    subject['name'],
+                    item['site_id'],
+                    section_id
+                ))
+                subject_id = self.cursor.lastrowid
+            # 3. edition
+            chapter = item['chapter']
+            self.cursor.execute(
+                "select id from editions where site_id='%s' and name='%s'" % (item['site_id'], chapter['edition']))
+            row = self.cursor.fetchone()
+            if row:
+                edition_id = chapter['edition_id']
+            else:
+                self.cursor.execute(self.edition_sql, (
+                    chapter['edition_id'],
+                    chapter['edition'],
+                    subject_id,
+                    item['site_id'],
+                    section_id
+                ))
+                edition_id = chapter['edition_id']
+            # 4. textbook
+            chapter = item['chapter']
+            self.cursor.execute(
+                "select id from textbooks where site_id='%s' and name='%s'" % (item['site_id'], chapter['textbook']))
+            row = self.cursor.fetchone()
+            if row:
+                textbook_id = row[0]
+            else:
+                self.cursor.execute(self.textbook_sql, (
+                    chapter['textbook'],
+                    chapter['textbook_id'],
+                    chapter['edition'],
+                    edition_id,
+                    item['site_id'],
+                    item['grade'],
+                    item['subject'],
+                    item['term'],
+                ))
+                textbook_id = self.cursor.lastrowid
+            # 5. unit
+            chapter = item['unit']
+            self.cursor.execute(
+                "select id from chapters where source_id='%s' and name='%s'" % (chapter['id'], chapter['name']))
+            row = self.cursor.fetchone()
+            if row:
+                unit_id = row[0]
+            else:
+                self.cursor.execute(self.chapter_sql, (
+                    chapter['name'],
+                    chapter['parent_id'],
+                    chapter['id'],
+                    chapter['edition'],
+                    edition_id,
+                    item['grade'],
+                    item['subject'],
+                    chapter['textbook'],
+                    textbook_id,
+                    chapter['have_child']
+                ))
+                unit_id = self.cursor.lastrowid
+            # 5. chapter
+            chapter = item['chapter']
+            self.cursor.execute(
+                "select id from chapters where source_id='%s' and name='%s'" % (chapter['id'], chapter['name']))
+            row = self.cursor.fetchone()
+            if row:
+                chapter_id = row[0]
+            else:
+                self.cursor.execute(self.chapter_sql, (
+                    chapter['name'],
+                    unit_id,
+                    chapter['id'],
+                    chapter['edition'],
+                    edition_id,
+                    item['grade'],
+                    item['subject'],
+                    chapter['textbook'],
+                    textbook_id,
+                    chapter['have_child']
+                ))
+                chapter_id = self.cursor.lastrowid
+
+
+            # 6. chapter_paper
+            self.cursor.execute("select * from chapter_paper where chapter_id='%s' and paper_id='%s'" % (chapter_id,paper_id))
+            row = self.cursor.fetchone()
+            if row:
+                pass
+            else:
+                self.cursor.execute(self.chapter_paper_sql,(
+                    chapter_id,
+                    paper_id
+                ))
+            # 7. 习题
             self.cursor.execute("select id from exercises where site_id='%s' and source_id = '%s'" % (
             item['site_id'], item['source_id']))
             row = self.cursor.fetchone()
@@ -625,6 +819,7 @@ class ZujuanPipeline(object):
                             item['answer'],
                             item['url']
                         ))
+                exercise_id = row[0]
             else:  # 写入试题表
                 self.cursor.execute(self.exercise_sql, (
                     item['subject'],
@@ -632,7 +827,7 @@ class ZujuanPipeline(object):
                     item['type'],
                     item['degree'],
                     item['source_id'],
-                    item['paper_id'],
+                    paper_id,
                     item['site_id'],
                     item['description'],
                     item['method'],
@@ -644,8 +839,18 @@ class ZujuanPipeline(object):
                     item['url'],
                     item['is_wrong'],
                     item['sort']
-                )
-                                    )
+                ))
+                exercise_id = self.cursor.lastrowid
+            # 8. 习题对应试卷
+            self.cursor.execute("select * from exercise_paper where exercise_id='%s' and paper_id='%s'" % (exercise_id, paper_id))
+            row = self.cursor.fetchone()
+            if row:
+                pass
+            else:
+                self.cursor.execute(self.exercise_paper_sql, (
+                    exercise_id,
+                    paper_id
+                ))
         else:
             spider.log('Undefined name: %s' % spider.name)
         return item

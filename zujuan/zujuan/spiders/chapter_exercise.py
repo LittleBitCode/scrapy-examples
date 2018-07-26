@@ -213,19 +213,19 @@ class ChapterExerciseSpider(scrapy.Spider):
                         'subject'  : subject,
                         'grade'    : grade,
                         'unit'     : {
-                        'id'         : js_chapter['id'],
-                        'site_id'    : self.site,
-                        'name'       : js_chapter['title'],
-                        'edition'    : textbook['edition'],
-                        'edition_id' : textbook['edition_id'],
-                        'textbook'   : textbook['name'],
-                        'textbook_id': textbook['id'],
-                        'term'       : self.xd[self.term],
-                        'subject'    : self.chid[self.subject],
-                        'grade'      : grade,
-                        'parent_id'  : unit['id'],
-                        'have_child' : js_chapter['hasChild'],
-                    }
+                            'id'         : js_chapter['id'],
+                            'site_id'    : self.site,
+                            'name'       : js_chapter['title'],
+                            'edition'    : textbook['edition'],
+                            'edition_id' : textbook['edition_id'],
+                            'textbook'   : textbook['name'],
+                            'textbook_id': textbook['id'],
+                            'term'       : self.xd[self.term],
+                            'subject'    : self.chid[self.subject],
+                            'grade'      : grade,
+                            'parent_id'  : unit['id'],
+                            'have_child' : js_chapter['hasChild'],
+                        }
                     },
                     dont_filter=True,
                 )
@@ -370,19 +370,15 @@ class ChapterExerciseSpider(scrapy.Spider):
                     for point in all_points:
                         if point != None:
                             points.append(str(point['name']))
-                exercise['points']      = json.dumps(points, ensure_ascii=False)  # 不转码 存储到数据库为中文
-                exercise['url']         = self.base_url + '/question/detail/' + question['question_id']
-                exercise['sort']        = unicode(sort)
-                paper['exercise_num']   = exercise_num
-                exercise['paper'] = paper
-                exercise['description_imgs'] = description_imgs
-                exercise['section']          = {
-                    'id': '2',
-                    'name': '初中',
-                }
+                exercise['points']           = json.dumps(points, ensure_ascii=False)  # 不转码 存储到数据库为中文
+                exercise['url']              = self.base_url + '/question/detail/' + question['question_id']
+                exercise['sort']             = unicode(sort)
+                exercise['section']          = {'id': self.term,'name': self.xd[self.term]}
                 exercise['term']             = self.xd[self.term]
                 exercise['unit']             = unit
                 exercise['subjects']         = subjects
                 exercise['chapter']          = chapter
+                exercise['description_imgs'] = description_imgs
+                paper['exercise_num']        = exercise_num
                 exercise['paper']            = paper
                 yield exercise
